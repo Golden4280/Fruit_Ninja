@@ -2,3 +2,5 @@
 Fruit Ninja FPGA Game
 
 HI LACIE CAN YOU SEE THIS
+
+YES NICA I CAN
