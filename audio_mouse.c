@@ -22,11 +22,16 @@ enum States {
 };
 
 enum SliceSound {
-    SOUND_NONE,
-    SOUND_PEACH,
+    SOUND_MISS,
+    SOUND_APPLE,
+    SOUND_LEMON,
+    SOUND_BANANA,
+    SOUND_PINEAPPLE,
+    SOUND_WATERMELON,
     SOUND_STRAWBERRY,
-    SOUND_MELON,
-    SOUND_BOMB
+    SOUND_POMPGRANATE,
+    SOUND_BOMB,
+    
 };
 
 volatile enum States current_state = STATE_START;
@@ -160,20 +165,20 @@ void play_sound(volatile int *audio_ptr, const short sound[], int length) {
     }
 }
 
-void play_event_sound(volatile int *audio_ptr, enum SliceSound which) {
-    if (which == SOUND_NONE) {
+void play_event_sound(volatile int *audio_ptr, enum SliceSound sound) {
+    if (sound == SOUND_MISS) {
         play_sound(audio_ptr, miss_sound, miss_sound_len);
     }
-    else if (which == SOUND_PEACH) {
+    else if (sound == SOUND_PEACH) {
         play_sound(audio_ptr, peach_sound, peach_sound_len);
     }
-    else if (which == SOUND_STRAWBERRY) {
+    else if (sound == SOUND_STRAWBERRY) {
         play_sound(audio_ptr, strawberry_sound, strawberry_sound_len);
     }
-    else if (which == SOUND_MELON) {
+    else if (sound == SOUND_MELON) {
         play_sound(audio_ptr, melon_sound, melon_sound_len);
     }
-    else if (which == SOUND_BOMB) {
+    else if (sound == SOUND_BOMB) {
         play_sound(audio_ptr, bomb_sound, bomb_sound_len);
     }
 }
@@ -257,7 +262,7 @@ int main(void) {
                 current_state = STATE_BOMB;
             }
             else if (sw & 0x10) {
-                play_event_sound(audio_ptr, SOUND_NONE);
+                play_event_sound(audio_ptr, SOUND_MISS);
             }
             else {
                 /*
