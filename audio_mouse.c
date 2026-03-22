@@ -54,11 +54,35 @@ const short miss_sound[] = {
 };
 const int miss_sound_len = sizeof(miss_sound) / sizeof(miss_sound[0]);
 
-const short peach_sound[] = {
-    /* paste peach sound here */
+const short apple_sound[] = {
+    /* paste apple sound here */
     0
 };
-const int peach_sound_len = sizeof(peach_sound) / sizeof(peach_sound[0]);
+const int apple_sound_len = sizeof(apple_sound) / sizeof(apple_sound[0]);
+
+const short lemon_sound[] = {
+    /* paste lemon sound here */
+    0
+};
+const int lemon_sound_len = sizeof(lemon_sound) / sizeof(lemon_sound[0]);
+
+const short banana_sound[] = {
+    /* paste banana sound here */
+    0
+};
+const int banana_sound_len = sizeof(banana_sound) / sizeof(banana_sound[0]);
+
+const short pineapple_sound[] = {
+    /* paste pineapple sound here */
+    0
+};
+const int pineapple_sound_len = sizeof(pineapple_sound) / sizeof(pineapple_sound[0]);
+
+const short watermelon_sound[] = {
+    /* paste watermelon sound here */
+    0
+};
+const int watermelon_sound_len = sizeof(watermelon_sound) / sizeof(watermelon_sound[0]);
 
 const short strawberry_sound[] = {
     /* paste strawberry sound here */
@@ -66,11 +90,11 @@ const short strawberry_sound[] = {
 };
 const int strawberry_sound_len = sizeof(strawberry_sound) / sizeof(strawberry_sound[0]);
 
-const short melon_sound[] = {
-    /* paste melon sound here */
+const short pomegranate_sound[] = {
+    /* paste pomegranate sound here */
     0
 };
-const int melon_sound_len = sizeof(melon_sound) / sizeof(melon_sound[0]);
+const int pomegranate_sound_len = sizeof(pomegranate_sound) / sizeof(pomegranate_sound[0]);
 
 const short bomb_sound[] = {
     /* paste bomb sound here */
