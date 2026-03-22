@@ -1,0 +1,340 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+
+// objects
+#include "Banana.h"
+#include "Lemon.h"
+#include "Pineapple.h"
+#include "Red_Apple.h"
+#include "Strawberry.h"
+#include "Watermelon.h"
+#include "Pomegranate.h"
+#include "Bomb.h"
+
+// screens
+#include "play.h"
+#include "start.h"
+#include "gameover.h"
+
+// struct
+typedef enum {
+  APPLE,
+  LEMON,
+  BANANA,
+  PINEAPPLE,
+  WATERMELON,
+  STRAWBERRY,
+  POMEGRANATE,
+  BOMB
+} Type;
+
+typedef struct {
+  // type of object for different actions/vga
+  Type type;
+  // direction/velocity
+  float vx, vy;
+  // position
+  float x, y;
+  // dimensions
+  int w, h;
+
+  float g;
+
+  // check location onscreen
+  int onScreen;  // 1 if active
+
+  const unsigned short* image;
+
+} Object;
+
+#define MAX_OBJECTS 10
+Object objects[MAX_OBJECTS];
+
+// FUNCTIONS
+
+void plot_pixel(int x, int y, short int colour);
+void wait_for_vsync();
+void clear_screen();
+void randomGenerator(Object* obj);
+void physics();
+void draw_background(const unsigned short* bg);
+void draw_object(int x0, int y0, int w, int h, const unsigned short* obj);
+void drawAllObjects();
+
+
+// CODE STARTS HERE
+
+#define VGA 0xff203020
+// #define pixel_buffer_start 0x08000000
+#define ROWS 240
+#define COLS 320
+#define pCOLS 512
+#define TRANSPARENT 0x0000
+volatile int pixel_buffer_start;  // global variable
+short int Buffer1[240][512];      // 240 rows, 512 (320 + padding) columns
+short int Buffer2[240][512];
+
+
+// recall pixel addr = base + (y << 10) + (x << 1)
+
+// PLOT PIXEL FUNCTION
+void plot_pixel(int x, int y, short int colour) {
+  volatile short int* pixel;
+
+  pixel = (volatile short int*)(pixel_buffer_start + (y << 10) + (x << 1));
+
+  *pixel = colour;
+}
+
+// VSYNC FUNCTION
+void wait_for_vsync() {
+  // addr of first buffer
+  volatile int* pixel_ctrl_ptr = (int*)VGA;
+
+  // write 1 to begin sync process
+  // sets S bit to 1
+  *pixel_ctrl_ptr = 1;
+
+  // polling loop for swap (status reg)
+  // wait until S set back to 1
+  while ((*(pixel_ctrl_ptr + 3) & 0x01) != 0);
+}
+
+// CLEAR SCREEN FUNCTION
+// loop through entire background
+// set each pixel to black to reset
+void clear_screen() {
+  for (int x = 0; x < 320; x++) {
+    for (int y = 0; y < 240; y++) {
+      plot_pixel(x, y, 0x0000);
+    }
+  }
+}
+
+// DRAWING FRUITS AND BOMBS
+// for drawing each iteration of the object
+// takes in cornor x and y position
+// then object size (48x48 pixels always but can make more dynamic if we want
+// to) iterates through whole object array takes pointer to specific image array
+// (which we define when object is gen)
+
+void draw_object(int x0, int y0, int w, int h, const unsigned short* obj) {
+  for (int y = 0; y < h; y++) {
+    // given start coordinate at y0
+    int y1 = y0 + y;
+    // if we are in bounds keep drawing
+    if (y1 < 0 || y1 >= 240) continue;
+
+    for (int x = 0; x < w; x++) {
+      int x1 = x0 + x;
+      // stay in bounds
+      if (x1 < 0 || x1 >= 320) continue;
+
+      // maps to location of pixel in array
+      unsigned short colour = obj[y * w + x];
+      if (colour != TRANSPARENT) {
+        plot_pixel(x1, y1, colour);
+      }
+    }
+  }
+}
+
+void draw_background(const unsigned short* bg) {
+  for (int y = 0; y < ROWS; y++) {
+    for (int x = 0; x < COLS; x++) {
+      unsigned short colour = bg[y * COLS + x];
+      plot_pixel(x, y, colour);
+    }
+  }
+}
+
+
+
+
+void drawAllObjects() {
+  for (int i = 0; i < MAX_OBJECTS; i++) {
+    if(objects[i].onScreen) {
+      draw_object((int)objects[i].x, (int)objects[i].y, 
+                objects[i].w, objects[i].h, objects[i].image);
+    }
+  }
+
+
+}
+
+void add_object() {
+  int chance = rand() % 10;
+  for (int i = 0; i < MAX_OBJECTS; i++) {
+    if (!objects[i].onScreen) {
+      if (!chance) {
+        randomGenerator(&objects[i]); // 10% chance of spawning per frmae
+      }
+      break; // one per frame
+    }
+  }
+
+
+}
+
+// RANDOM GEN
+void randomGenerator(Object* obj) {
+  // Randomize start location
+  obj->x =
+      rand() % 300 +
+      10;  // random value 0-299 (within vga, not at edge) then +10 to avoid 0
+           // edge giving object in 10-209 range (10 offset from each side)
+  obj->y = 239;  // objects start at bottom
+
+  // Randomize upward velocity
+  obj->vy = -(rand() % 5 +
+              5);  // gives velocity 5-9 (open to change upon testing)
+                   // negative since moving up screen (decreasing y direction)
+
+  // Randomize horizontal velocity
+  obj->vx =
+      rand() % 5 -
+      2;  // gives value -2, -1, 0, 1, 2 for left and right movement on screen
+
+  // Weighted random generator for fruit or bomb
+  // start with 60/30/10 (fruit/pom/bomb) split and test
+  int chance = rand() % 100;  // number 0-99
+
+  // chance of fruit
+  if (chance < 70) {
+    obj->type = rand() % 6;  // random index 0-5 for the first 6 fruit types
+
+  } else if (chance < 85) {
+    obj->type =
+        POMEGRANATE;  // If not less than 60 but less than 70 we hit pom range
+
+  } else {
+    obj->type = BOMB;  // otherwise we have a bomb
+  }
+
+  // mapping type of fruit to array
+  switch (obj->type) {
+    case APPLE:
+      obj->image = Red_Apple;
+      break;
+    case LEMON:
+      obj->image = Lemon;
+      break;
+    case BANANA:
+      obj->image = Banana;
+      break;
+    case PINEAPPLE:
+      obj->image = Pineapple;
+      break;
+    case WATERMELON:
+      obj->image = Watermelon;
+      break;
+    case STRAWBERRY:
+      obj->image = Strawberry;
+      break;
+    case POMEGRANATE:
+      obj->image = Pomegranate;
+      break;
+    case BOMB:
+      obj->image = Bomb;
+      break;
+    default:
+      obj->image = Bomb;
+
+      obj->w = 48;
+      obj->h = 48;
+
+      obj->onScreen =
+          1;  // tells us an object is onscreen for later detection and such
+  }
+}
+
+// GRAVITY MOVEMENT
+void physics() {
+
+  for (int i = 0; i < MAX_OBJECTS; i++) {
+  if (!objects[i].onScreen) {
+    return;
+  }
+
+  // update position
+  objects[i].x += objects[i].vx;
+  objects[i].y += objects[i].vy;
+
+  // apply force of gravity Fg = mg to vertical velocity
+  objects[i].vy += objects[i].g;
+
+  // when object is off screen
+  if (objects[i].y > 240 + objects[i].h) {
+    objects[i].onScreen = 0;
+  }
+
+  }
+}
+
+int main() {
+  volatile int* pixel_ctrl_ptr = (int*)VGA;
+  // declare other variables(not shown)
+  // initialize location and direction of rectangles(not shown)
+
+  // front buffer: current frame
+  // back buffer: next frame
+  // when next display is ready, swap ptrs
+
+  /* set front pixel buffer to Buffer 1 */
+  *(pixel_ctrl_ptr + 1) =
+      (int)&Buffer1;  // first store the address in the  back buffer
+  /* now, swap the front/back buffers, to set the front buffer location */
+  wait_for_vsync();
+  /* initialize a pointer to the pixel buffer, used by drawing functions */
+  pixel_buffer_start = *pixel_ctrl_ptr;
+  clear_screen();  // pixel_buffer_start points to the pixel buffer
+
+  /* set back pixel buffer to Buffer 2 */
+  *(pixel_ctrl_ptr + 1) = (int)&Buffer2;
+  pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // we draw on the back buffer
+  clear_screen();  // pixel_buffer_start points to the pixel buffer
+
+  draw_background(play);
+
+  // INITIALIZE OBJECT ARRAY
+  for (int i = 0; i < MAX_OBJECTS; i++) {
+    objects[i].onScreen = 0;
+  }
+
+  // // init sprite
+
+  // Object bomb = {.type = BOMB,
+  //                .vx = 1,
+  //                .vy = -8.0f,
+  //                .x = 50,
+  //                .y = 239,
+  //                .w = BOMB_WIDTH,
+  //                .h = BOMB_HEIGHT,
+  //                .g = 0.2f,
+  //                .onScreen = 1,
+  //                .image = Bomb};
+
+  // test object
+  objects[0].x = 100;
+  objects[0].y = 120;
+  objects[0].vx = 0;
+  objects[0].vy = -9.0f;
+  objects[0].g = 0.2f;
+  objects[0].image = Lemon;
+  objects[0].h = LEMON_HEIGHT;
+  objects[0].w = LEMON_WIDTH;
+  objects[0].onScreen = 1;
+
+  while (1) {
+    pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // new back buffer
+    draw_background(play);
+    add_object();
+    physics();
+    drawAllObjects();
+
+    wait_for_vsync();  // swap front and back buffers on VGA vertical sync
+  }
+}
+
+// TESTING ENDED
