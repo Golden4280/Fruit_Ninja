@@ -164,10 +164,10 @@ void drawAllObjects() {
 }
 
 void add_object() {
-  int chance = rand() % 10;
+  
   for (int i = 0; i < MAX_OBJECTS; i++) {
     if (!objects[i].onScreen) {
-      if (!chance) {
+      if (rand() % 10 == 0) {
         randomGenerator(&objects[i]); // 10% chance of spawning per frmae
       }
       break; // one per frame
@@ -199,6 +199,14 @@ void randomGenerator(Object* obj) {
   // Weighted random generator for fruit or bomb
   // start with 60/30/10 (fruit/pom/bomb) split and test
   int chance = rand() % 100;  // number 0-99
+
+  obj->w = 48;
+      obj->h = 48;
+
+      obj->onScreen =
+          1;  // tells us an object is onscreen for later detection and such
+
+  obj->g = 0.2f;
 
   // chance of fruit
   if (chance < 70) {
@@ -241,11 +249,7 @@ void randomGenerator(Object* obj) {
     default:
       obj->image = Bomb;
 
-      obj->w = 48;
-      obj->h = 48;
-
-      obj->onScreen =
-          1;  // tells us an object is onscreen for later detection and such
+      
   }
 }
 
@@ -254,7 +258,7 @@ void physics() {
 
   for (int i = 0; i < MAX_OBJECTS; i++) {
   if (!objects[i].onScreen) {
-    return;
+    continue;
   }
 
   // update position
@@ -273,6 +277,8 @@ void physics() {
 }
 
 int main() {
+
+  srand(1);
   volatile int* pixel_ctrl_ptr = (int*)VGA;
   // declare other variables(not shown)
   // initialize location and direction of rectangles(not shown)
@@ -316,15 +322,15 @@ int main() {
   //                .image = Bomb};
 
   // test object
-  objects[0].x = 100;
-  objects[0].y = 120;
-  objects[0].vx = 0;
-  objects[0].vy = -9.0f;
-  objects[0].g = 0.2f;
-  objects[0].image = Lemon;
-  objects[0].h = LEMON_HEIGHT;
-  objects[0].w = LEMON_WIDTH;
-  objects[0].onScreen = 1;
+  // objects[0].x = 100;
+  // objects[0].y = 120;
+  // objects[0].vx = 0;
+  // objects[0].vy = -9.0f;
+  // objects[0].g = 0.2f;
+  // objects[0].image = Lemon;
+  // objects[0].h = LEMON_HEIGHT;
+  // objects[0].w = LEMON_WIDTH;
+  // objects[0].onScreen = 1;
 
   while (1) {
     pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // new back buffer
