@@ -187,7 +187,7 @@ int main() {
   }
 }
 
-// TESTING ENDED
+// PREVIOUS TESTING FUNCTIONS (NOT GRAVITY JUST BASIC ANIMATIONS)
 
 typedef struct {
   float x;
