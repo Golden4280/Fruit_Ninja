@@ -6,6 +6,12 @@
 #define SWITCH_BASE 0xFF200040
 #define KEY_BASE    0xFF200050
 
+/* internal cursor limits */
+#define X_MIN 0
+#define X_MAX 319
+#define Y_MIN 0
+#define Y_MAX 239
+
 enum States {
     STATE_START,
     STATE_PLAY,
@@ -17,7 +23,11 @@ enum States {
 volatile enum States current_state = STATE_START;
 volatile int fruit_count = 0;
 
-//LACIE's INTERRUPTS
+/* internal mouse position */
+volatile int x_pos = 160;
+volatile int y_pos = 120;
+
+/* LACIE's INTERRUPTS */
 static void handler(void) __attribute__((interrupt("machine")));
 void KEY_ISR(void);
 void set_KEY(void);
@@ -47,6 +57,8 @@ void KEY_ISR(void) {
         }
         else if (current_state == STATE_GAMEOVER) {
             fruit_count = 0;
+            x_pos = 160;
+            y_pos = 120;
             current_state = STATE_START;
         }
     }
@@ -58,7 +70,14 @@ void set_KEY(void) {
     *(KEY_ptr + 2) = 0x1;
 }
 
-//MAIN
+/* clamp helper so cursor stays in bounds */
+int clamp(int value, int min, int max) {
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
+
+/* MAIN */
 int main(void) {
     volatile int *LEDR_ptr   = (int *)LEDR_BASE;
     volatile int *switch_ptr = (int *)SWITCH_BASE;
@@ -68,15 +87,15 @@ int main(void) {
     alt_up_ps2_dev *ps2 = alt_up_ps2_open_dev("/dev/ps2_0");
 
     if (ps2 == NULL) {
-        while (1); //fail safe
+        while (1); /* fail safe */
     }
 
-//Initialize mouse
-    alt_up_ps2_init(ps2);// detect device
-    alt_up_ps2_mouse_reset(ps2);// reset mouse
-    alt_up_ps2_mouse_set_mode(ps2, 0xF4);// enable data reporting
+    /* Initialize mouse */
+    alt_up_ps2_init(ps2);
+    alt_up_ps2_mouse_reset(ps2);
+    alt_up_ps2_mouse_set_mode(ps2, 0xF4); /* enable data reporting */
 
-//Interrupt stuff
+    /* Interrupt stuff */
     set_KEY();
 
     int mstatus_value, mtvec_value, mie_value;
@@ -118,16 +137,26 @@ int main(void) {
                 if (alt_up_ps2_read_data_byte(ps2, &byte) == 0) {
 
                     /*
-                        3-byte packets
-                        byte0 bit0 = left
-                        byte0 bit1 = right
-                        byte0 bit3 = always 1
-                    */
+                        Standard 3-byte packet:
+                        packet[0] = buttons/sign bits
+                        packet[1] = X movement
+                        packet[2] = Y movement
 
+                        bit0 = left button
+                        bit1 = right button
+                        bit3 = always 1 in first byte
+                    */
                     static int count = 0;
                     static unsigned char packet[3];
 
                     packet[count++] = byte;
+
+                    /* first byte sanity check */
+                    if (count == 1) {
+                        if ((packet[0] & 0x08) == 0) {
+                            count = 0;
+                        }
+                    }
 
                     if (count == 3) {
                         count = 0;
@@ -135,6 +164,18 @@ int main(void) {
                         int left  = packet[0] & 0x1;
                         int right = (packet[0] >> 1) & 0x1;
 
+                        /* signed movement deltas */
+                        int dx = (char)packet[1];
+                        int dy = (char)packet[2];
+
+                        /*
+                            update internal cursor
+                            PS/2 positive Y is up, so subtract for screen-style coords
+                        */
+                        x_pos = clamp(x_pos + dx, X_MIN, X_MAX);
+                        y_pos = clamp(y_pos - dy, Y_MIN, Y_MAX);
+
+                        /* click actions stay same as your version */
                         if (left) {
                             fruit_count++;
                             current_state = STATE_FRUIT;
