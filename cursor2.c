@@ -291,8 +291,11 @@ int main(void) {
                         int left  =  packet[0] & 0x1;
                         int right = (packet[0] >> 1) & 0x1;
 
-                        /* Sign-extend using the sign bits in packet[0]
-                           (simple (char) cast is wrong — see file 2 comment) */
+                         /* FIX: Apply sign bits from status byte (bits 4 and 5).
+                   The PS/2 protocol stores the sign of dx in bit 4 of the
+                   status byte and the sign of dy in bit 5. We must use these
+                   to extend the 8-bit values to signed integers — NOT a
+                   simple (signed char) cast, which ignores those bits. */
                         int dx = (int)packet[1] - ((packet[0] & 0x10) ? 256 : 0);
                         int dy = (int)packet[2] - ((packet[0] & 0x20) ? 256 : 0);
 

@@ -6,7 +6,7 @@
 #define SWITCH_BASE 0xFF200040
 #define KEY_BASE    0xFF200050
 
-/* internal cursor limits */
+//cursor limits
 #define X_MIN 0
 #define X_MAX 319
 #define Y_MIN 0
@@ -23,20 +23,22 @@ enum States {
 volatile enum States current_state = STATE_START;
 volatile int fruit_count = 0;
 
-/* internal mouse position */
+//mouse positions
 volatile int x_pos = 160;
 volatile int y_pos = 120;
 
-/* LACIE's INTERRUPTS */
+//INTERRUPT stuff KEY from lacies code
 static void handler(void) __attribute__((interrupt("machine")));
 void KEY_ISR(void);
 void set_KEY(void);
 
+//DELAY so we can see the change from play to fruit or to bomb
 void delay(void) {
     volatile int i;
     for (i = 0; i < 500000; i++);
 }
 
+//lacies interrupt stuff
 static void handler(void) {
     int mcause_value;
     __asm__ volatile("csrr %0, mcause" : "=r"(mcause_value));
@@ -70,14 +72,13 @@ void set_KEY(void) {
     *(KEY_ptr + 2) = 0x1;
 }
 
-/* clamp helper so cursor stays in bounds */
+//MAKE SURE cursor stays in the bounds
 int clamp(int value, int min, int max) {
     if (value < min) return min;
     if (value > max) return max;
     return value;
 }
-
-/* MAIN */
+//MAIN
 int main(void) {
     volatile int *LEDR_ptr   = (int *)LEDR_BASE;
     volatile int *switch_ptr = (int *)SWITCH_BASE;
@@ -87,15 +88,14 @@ int main(void) {
     alt_up_ps2_dev *ps2 = alt_up_ps2_open_dev("/dev/ps2_0");
 
     if (ps2 == NULL) {
-        while (1); /* fail safe */
+        while (1); //fail safe
     }
-
-    /* Initialize mouse */
+//INitialize mouse 
     alt_up_ps2_init(ps2);
     alt_up_ps2_mouse_reset(ps2);
-    alt_up_ps2_mouse_set_mode(ps2, 0xF4); /* enable data reporting */
+    alt_up_ps2_mouse_set_mode(ps2, 0xF4); 
 
-    /* Interrupt stuff */
+ 
     set_KEY();
 
     int mstatus_value, mtvec_value, mie_value;

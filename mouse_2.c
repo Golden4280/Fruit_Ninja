@@ -21,23 +21,23 @@ enum States {
 volatile enum States current_state = STATE_START;
 volatile int fruit_count = 0;
 
-/* internal mouse position */
+//internal mouse positions
 volatile int x_pos = 160;
 volatile int y_pos = 120;
 
-/* interrupt functions */
+//interrupt functions
 static void handler(void) __attribute__((interrupt("machine")));
 void KEY_ISR(void);
 void set_KEY(void);
 
-/* PS/2 helper functions */
+//ps2 helper functions
 int read_ps2_byte(volatile int *ps2_ptr, unsigned char *byte);
 void write_ps2_byte(volatile int *ps2_ptr, unsigned char byte);
 void clear_ps2_fifo(volatile int *ps2_ptr);
 int wait_for_ps2_byte(volatile int *ps2_ptr, unsigned char *byte, int timeout);
 void init_mouse(volatile int *ps2_ptr);
 
-/* utility functions */
+//delay and clamp
 void delay(void);
 int clamp(int value, int min, int max);
 
