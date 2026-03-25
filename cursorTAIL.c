@@ -17,21 +17,9 @@
 
 #define BLACK  0x0000
 #define WHITE  0xFFFF
-/* ---------------------------------------------------------------
- * Tail settings — tweak these to taste
- *
- *   TAIL_LEN   : number of ghost positions stored (more = longer tail)
- *   TAIL_MIN_SZ: smallest ghost square size in pixels
- *   TAIL_STEP  : how many pixels of movement before a new ghost is added
- *
- * The tail records a new snapshot only when the cursor has moved at
- * least TAIL_STEP pixels (Manhattan distance) since the last snapshot.
- * This keeps the tail "sparse" when barely moving so it feels natural
- * rather than a dense blur sitting under a stationary cursor.
- * --------------------------------------------------------------- */
-#define TAIL_LEN    10
-#define TAIL_MIN_SZ  0
-#define TAIL_STEP    1
+#define TAIL_LEN    10 //number of ghost positions stored , tail length
+#define TAIL_MIN_SZ  0 // smallest tail square size in pixels
+#define TAIL_STEP    1 //how many pixels of movement before a new box is added
 
 //FSM states
 enum States {
@@ -48,16 +36,6 @@ volatile int fruit_count = 0;
 //Cursor positions
 volatile int x_pos = 160;
 volatile int y_pos = 120;
-
-/* ---------------------------------------------------------------
- * Tail ring buffer
- *
- * tail_x[], tail_y[]  — stored positions (oldest first after wrap)
- * tail_head           — index of the NEXT write slot (oldest entry)
- * tail_count          — how many valid entries are stored so far
- * tail_last_x/y       — last position a snapshot was recorded at
- *                       (used for TAIL_STEP threshold)
- * --------------------------------------------------------------- */
 
 int tail_x[TAIL_LEN]; //stored positions (oldest)
 int tail_y[TAIL_LEN]; 
