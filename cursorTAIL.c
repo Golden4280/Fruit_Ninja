@@ -1,14 +1,14 @@
 #include <stdio.h>
 
-#define LEDR_BASE   0xFF200000
+#define LEDR_BASE 0xFF200000
 #define SWITCH_BASE 0xFF200040
-#define KEY_BASE    0xFF200050
-#define PS2_BASE    0xFF200100
-#define VGA_BASE    0xFF203020
+#define KEY_BASE 0xFF200050
+#define PS2_BASE 0xFF200100
+#define VGA_BASE 0xFF203020
 
 #define SCREEN_W 320
 #define SCREEN_H 240
-#define CURSOR_SIZE 5
+#define CURSOR_SIZE 6
 
 #define X_MIN 0
 #define X_MAX (SCREEN_W - CURSOR_SIZE)
@@ -17,7 +17,6 @@
 
 #define BLACK  0x0000
 #define WHITE  0xFFFF
-
 /* ---------------------------------------------------------------
  * Tail settings — tweak these to taste
  *
@@ -34,6 +33,7 @@
 #define TAIL_MIN_SZ  0
 #define TAIL_STEP    1
 
+//FSM states
 enum States {
     STATE_START,
     STATE_PLAY,
@@ -45,6 +45,7 @@ enum States {
 volatile enum States current_state = STATE_START;
 volatile int fruit_count = 0;
 
+//Cursor positions
 volatile int x_pos = 160;
 volatile int y_pos = 120;
 
@@ -57,35 +58,39 @@ volatile int y_pos = 120;
  * tail_last_x/y       — last position a snapshot was recorded at
  *                       (used for TAIL_STEP threshold)
  * --------------------------------------------------------------- */
-int tail_x[TAIL_LEN];
-int tail_y[TAIL_LEN];
-int tail_head  = 0;
-int tail_count = 0;
-int tail_last_x = 160;
+
+int tail_x[TAIL_LEN]; //stored positions (oldest)
+int tail_y[TAIL_LEN]; 
+int tail_head  = 0; //Points to where the next position will be written.
+                    //  When the buffer is full, this overwrites the oldest point.
+int tail_count = 0; //how many valid entries are stored so far
+int tail_last_x = 160;  //Last position where we added a tail point.
+                        // Ensures we only add new points after moving enough (TAIL_STEP).
 int tail_last_y = 120;
 
-/* VGA globals */
+//For VGA buffer
 volatile int pixel_buffer_start;
 short int Buffer1[240][512];
 short int Buffer2[240][512];
 
-/* ---------------------------------------------------------------
- * Forward declarations
- * --------------------------------------------------------------- */
-static void handler(void) __attribute__((interrupt("machine")));
+//Interrupt key pasted from lacies code
+static void handler(void) __attribute__((interrupt("machine")));//tells the compiler this function is a machine-mode interrupt handler and should use the correct interrupt
 void KEY_ISR(void);
 void set_KEY(void);
 
+//PS/2 Helper functions
 int  read_ps2_byte(volatile int *ps2_ptr, unsigned char *byte);
 void write_ps2_byte(volatile int *ps2_ptr, unsigned char byte);
 void clear_ps2_fifo(volatile int *ps2_ptr);
 int  wait_for_ps2_byte(volatile int *ps2_ptr, unsigned char *byte, int timeout);
 void init_mouse(volatile int *ps2_ptr);
 
+//Delay so we can see state changes, clamp so mouse doesn't exit the screen
 void delay(void);
-int  clamp(int value, int min, int max);
-int  abs_val(int v);
+int clamp(int value, int min, int max);
+int abs_val(int v);
 
+//VGA helper functions
 void plot_pixel(int x, int y, short int colour);
 void clear_screen(void);
 void wait_for_vsync(void);
@@ -94,9 +99,7 @@ void update_cursor_position(int dx, int dy);
 void push_tail(int x, int y);
 void draw_tail(void);
 
-/* ---------------------------------------------------------------
- * Utility
- * --------------------------------------------------------------- */
+
 void delay(void) {
     volatile int i;
     for (i = 0; i < 500000; i++);
@@ -109,15 +112,17 @@ int clamp(int value, int min, int max) {
 }
 
 int abs_val(int v) {
-    return v < 0 ? -v : v;
+    if (v < 0) {
+        return -v;
+    } else {
+        return v;
+    }
 }
 
-/* ---------------------------------------------------------------
- * Interrupt handler
- * --------------------------------------------------------------- */
 static void handler(void) {
     int mcause_value;
     __asm__ volatile("csrr %0, mcause" : "=r"(mcause_value));
+
     if (mcause_value == 0x80000012) {
         KEY_ISR();
     }
@@ -125,13 +130,14 @@ static void handler(void) {
 
 void KEY_ISR(void) {
     volatile int *KEY_ptr = (int *)KEY_BASE;
-    int pressed = *(KEY_ptr + 3);
-    *(KEY_ptr + 3) = pressed;
+    int pressed = *(KEY_ptr + 3); //read edge capture 
+    *(KEY_ptr + 3) = pressed; //clear edge capture
 
-    if (pressed & 0x1) {
+    if (pressed & 0x1) { //if key0 is pressed change state depending on what ur in rn
         if (current_state == STATE_START) {
             current_state = STATE_PLAY;
-        } else if (current_state == STATE_GAMEOVER) {
+        }
+        else if (current_state == STATE_GAMEOVER) {
             fruit_count = 0;
             x_pos = 160;
             y_pos = 120;
@@ -146,85 +152,119 @@ void KEY_ISR(void) {
 
 void set_KEY(void) {
     volatile int *KEY_ptr = (int *)KEY_BASE;
-    *(KEY_ptr + 3) = 0xF;
-    *(KEY_ptr + 2) = 0x1;
+    *(KEY_ptr + 3) = 0xF;  //clear everything
+    *(KEY_ptr + 2) = 0x1;  //enable key0 to interrupt
 }
 
-/* ---------------------------------------------------------------
- * PS/2
- * --------------------------------------------------------------- */
-int read_ps2_byte(volatile int *ps2_ptr, unsigned char *byte) {
-    int data = *ps2_ptr;
-    if (data & 0x8000) {
-        *byte = (unsigned char)(data & 0xFF);
+
+int read_ps2_byte(volatile int *ps2_ptr, unsigned char *byte) {//ONLY USE DATA IF RVALID IS 1
+    int data = *ps2_ptr; //read data reg THIS ALSO POPS THIS DATA OFF THE FIFO WITHOUT ME DOIN ANYTHING
+    if (data & 0x8000) {// checking if bit 15 or RVALID is 1, if not the byte is not valid so ignore 
+        *byte = (unsigned char)(data & 0xFF);//if valid, keep only the lower actual data bits of data
         return 1;
     }
     return 0;
 }
 
 void write_ps2_byte(volatile int *ps2_ptr, unsigned char byte) {
-    *ps2_ptr = (int)byte;
+    *ps2_ptr = (int)byte;//put this byte into the PS/2 data register so the core sends it to the mouse
 }
 
-void clear_ps2_fifo(volatile int *ps2_ptr) {
-    unsigned char dummy;
-    while (read_ps2_byte(ps2_ptr, &dummy)) {}
+//read until read_ps2_byte says no valid data remains
+//Each successful read removes one item from that FIFO
+//So loop keeps consuming bytes until the FIFO is empty
+void clear_ps2_fifo(volatile int *ps2_ptr) {//what happens when we call clear
+    unsigned char throwaway_byte;
+
+    while (1) {
+        int success = read_ps2_byte(ps2_ptr, &throwaway_byte);
+
+        if (success == 0) {
+            break;
+        }
+        //otherwise we got a byte so inf loop
+    }
 }
 
+//polling 
+//keep waiting for RVALID=1 and a byte arrives, or timeout expires
 int wait_for_ps2_byte(volatile int *ps2_ptr, unsigned char *byte, int timeout) {
-    while (timeout-- > 0) {
-        if (read_ps2_byte(ps2_ptr, byte)) return 1;
+    while (timeout > 0) {
+        if (read_ps2_byte(ps2_ptr, byte) == 1) {
+            return 1;
+        }
+        timeout--;
     }
     return 0;
 }
 
 void init_mouse(volatile int *ps2_ptr) {
-    unsigned char byte;
+    unsigned char byte_received;
 
+    // Remove any old leftover bytes
     clear_ps2_fifo(ps2_ptr);
 
+    // Tell mouse to reset
     write_ps2_byte(ps2_ptr, 0xFF);
-    wait_for_ps2_byte(ps2_ptr, &byte, 1000000);
-    wait_for_ps2_byte(ps2_ptr, &byte, 1000000);
-    wait_for_ps2_byte(ps2_ptr, &byte, 1000000);
 
+    // Wait for mouse responses after reset
+    wait_for_ps2_byte(ps2_ptr, &byte_received, 1000000);   // aknowledgment 0xFA
+    wait_for_ps2_byte(ps2_ptr, &byte_received, 1000000);   // self-test passed 0xAA
+    wait_for_ps2_byte(ps2_ptr, &byte_received, 1000000);   // mouse ID 0x00
+
+    // Remove any extra leftover bytes
     clear_ps2_fifo(ps2_ptr);
 
+    // Tell mouse to start sending movement/button data (3 byte packets)
     write_ps2_byte(ps2_ptr, 0xF4);
-    wait_for_ps2_byte(ps2_ptr, &byte, 1000000);
 
+    // Wait for acknowledgment 
+    wait_for_ps2_byte(ps2_ptr, &byte_received, 1000000);
+
+    //clear one last time to be safe
     clear_ps2_fifo(ps2_ptr);
 }
 
-/* ---------------------------------------------------------------
- * VGA
- * --------------------------------------------------------------- */
+//DRAW MOUSE
 void plot_pixel(int x, int y, short int colour) {
-    volatile short int *pixel_address =
-        (volatile short int *)(pixel_buffer_start + (y << 10) + (x << 1));
+    volatile short int *pixel_address = (volatile short int *)(pixel_buffer_start + (y << 10) + (x << 1));
     *pixel_address = colour;
 }
 
 void clear_screen(void) {
     int x, y;
-    for (x = 0; x < SCREEN_W; x++)
-        for (y = 0; y < SCREEN_H; y++)
+    for (x = 0; x < SCREEN_W; x++) {
+        for (y = 0; y < SCREEN_H; y++) {
             plot_pixel(x, y, BLACK);
+        }
+    }
 }
 
 void wait_for_vsync(void) {
     volatile int *pixel_ctrl_ptr = (int *)VGA_BASE;
+
+    // Request a buffer swap (start synchronization)
     *pixel_ctrl_ptr = 1;
-    while (*(pixel_ctrl_ptr + 3) & 0x01) {}
+
+    // Keep checking the status register until sync is done
+    while (1) {
+        int status = *(pixel_ctrl_ptr + 3);   // read status register
+
+        if ((status & 0x01) == 0) {
+            break;  // sync finished
+        }
+    }
 }
 
 void draw_cursor(int x, int y) {
     int row, col;
-    for (row = 0; row < CURSOR_SIZE; row++) {
-        for (col = 0; col < CURSOR_SIZE; col++) {
-            int px = x + col;
-            int py = y + row;
+    for (row = 0; row < CURSOR_SIZE; row++) { //height
+        for (col = 0; col < CURSOR_SIZE; col++) {//width
+            int px = x + col;   // horizontal position
+            int py = y + row;   // vertical position
+            // Make sure the pixel is inside the screen boundaries
             if (px >= 0 && px < SCREEN_W && py >= 0 && py < SCREEN_H)
+                // Draw a white pixel at that position
                 plot_pixel(px, py, WHITE);
         }
     }
@@ -235,92 +275,71 @@ void update_cursor_position(int dx, int dy) {
     y_pos = clamp(y_pos - dy, Y_MIN, Y_MAX);
 }
 
-/* ---------------------------------------------------------------
- * push_tail — record a new tail snapshot if the cursor has moved
- *             far enough from the last recorded position.
- *
- * The ring buffer stores positions from oldest (tail_head) to newest
- * (tail_head - 1 mod TAIL_LEN).  draw_tail() iterates the buffer
- * from oldest to newest and assigns each position a brightness and
- * size based on how recent it is.
- * --------------------------------------------------------------- */
+ //saves a new tail position whn cursor moved since last saved point
+ //use circular buffer --> tail_head points to the oldest position, 
+ //draw tail goes from oldest to newest and makes newer points brighter and larger 
 void push_tail(int x, int y) {
+    //how far the cursor moved since the last saved point
     int dist = abs_val(x - tail_last_x) + abs_val(y - tail_last_y);
-
+    // If it hasn’t moved far enough, don’t add a new tail point
     if (dist < TAIL_STEP) return;
-
+    //Store the new position at the current write index
     tail_x[tail_head] = x;
     tail_y[tail_head] = y;
+    //Move the write index forward (wrap around if at the end)
     tail_head = (tail_head + 1) % TAIL_LEN;
-
-    if (tail_count < TAIL_LEN) tail_count++;
-
+    //Increase count until buffer is full
+    if (tail_count < TAIL_LEN)
+        tail_count++;
+    //Update last recorded position
     tail_last_x = x;
     tail_last_y = y;
 }
 
-/* ---------------------------------------------------------------
- * draw_tail — draw every ghost in the ring buffer.
- *
- * For each ghost we compute:
- *
- *   age   = 0 (oldest) … tail_count-1 (most recent, just behind cursor)
- *   frac  = age / (tail_count - 1)   → 0.0 … 1.0 scaled by 16 to
- *           avoid floating point:
- *           frac16 = age * 16 / (tail_count - 1)   (0 … 16)
- *
- * Size:
- *   size = TAIL_MIN_SZ + (CURSOR_SIZE - TAIL_MIN_SZ) * frac16 / 16
- *   Oldest  → TAIL_MIN_SZ pixels square (tiny)
- *   Newest  → CURSOR_SIZE pixels square (same as cursor, blends in)
- *
- * Colour (RGB565 grey):
- *   The 5-bit R/B channels and 6-bit G channel are set proportionally.
- *   Oldest  → very dim  (~4/31 full brightness)
- *   Newest  → ~24/31    (bright but not full white, so cursor stands out)
- *
- *   colour = (r << 11) | (g << 5) | b
- *   r, b ∈ [0..31],  g ∈ [0..63]
- *
- *   r = 4  + (24 - 4)  * frac16 / 16  =  4 + 20 * frac16 / 16
- *   g = 8  + (48 - 8)  * frac16 / 16  =  8 + 40 * frac16 / 16
- *   b = 4  + (24 - 4)  * frac16 / 16  =  4 + 20 * frac16 / 16
- *
- * The ghost is centred on the stored position so it shrinks inward
- * symmetrically, which makes it look like the cursor is "trailing"
- * a shrinking echo rather than a left-aligned stub.
- * --------------------------------------------------------------- */
 void draw_tail(void) {
     int i, age, idx, frac16, size, half, r, g, b;
     short int colour;
     int px, py, row, col;
 
+    // If we don’t have enough points theres nothing to draw
     if (tail_count < 2) return;
 
+    // Loop through all stored tail points (oldest → newest)
     for (i = 0; i < tail_count; i++) {
-        /* i=0 is oldest, i=tail_count-1 is most recent */
+
+        // Find the correct index in the circular buffer
+        // (handles wrap-around properly)
         idx = (tail_head - tail_count + i + TAIL_LEN * 2) % TAIL_LEN;
 
-        age    = i;
-        frac16 = age * 16 / (tail_count - 1);   /* 0 … 16, integer */
+        age = i;  // 0 = oldest, larger = more recent
 
-        /* Size: smallest for oldest, grows toward cursor size */
+        // Scale age from 0 → 16 (used for size + brightness)
+        frac16 = age * 16 / (tail_count - 1);
+
+        // Make older points smaller, newer ones bigger
         size = TAIL_MIN_SZ + ((CURSOR_SIZE - TAIL_MIN_SZ) * frac16) / 16;
         if (size < 1) size = 1;
 
-        /* Colour: dim grey for oldest, bright grey for newest */
+        // Make older points darker, newer ones brighter (grey color)
         r = 4  + (20 * frac16) / 16;
         g = 8  + (40 * frac16) / 16;
         b = 4  + (20 * frac16) / 16;
+
+        // Combine RGB into 16-bit colour
         colour = (short int)((r << 11) | (g << 5) | b);
 
-        /* Centre the ghost on the stored cursor centre */
+        // Used to center the square around the stored position
         half = size / 2;
 
+        // Draw a square for this tail point
         for (row = 0; row < size; row++) {
             for (col = 0; col < size; col++) {
+
+                // Calculate pixel position
                 px = tail_x[idx] + (CURSOR_SIZE / 2) - half + col;
                 py = tail_y[idx] + (CURSOR_SIZE / 2) - half + row;
+
+                // Only draw if inside screen bounds
                 if (px >= 0 && px < SCREEN_W && py >= 0 && py < SCREEN_H)
                     plot_pixel(px, py, colour);
             }
@@ -328,60 +347,58 @@ void draw_tail(void) {
     }
 }
 
-/* ---------------------------------------------------------------
- * main
- * --------------------------------------------------------------- */
+//MAIN
 int main(void) {
-    volatile int *LEDR_ptr       = (int *)LEDR_BASE;
-    volatile int *switch_ptr     = (int *)SWITCH_BASE;
-    volatile int *ps2_ptr        = (int *)PS2_BASE;
+    volatile int *LEDR_ptr = (int *)LEDR_BASE;
+    volatile int *switch_ptr = (int *)SWITCH_BASE;
+    volatile int *ps2_ptr = (int *)PS2_BASE;
     volatile int *pixel_ctrl_ptr = (int *)VGA_BASE;
 
-    unsigned char byte;
+    unsigned char byte;//Stores one byte read from the PS/2 port
 
-    /* VGA double-buffer init */
-    *(pixel_ctrl_ptr + 1) = (int)&Buffer1;
-    wait_for_vsync();
-    pixel_buffer_start = *pixel_ctrl_ptr;
+    //double buffer
+    *(pixel_ctrl_ptr + 1) = (int)&Buffer1;//buffer1 is the back buffer
+    wait_for_vsync();//Swap buffers at the next vertical sync
+    pixel_buffer_start = *pixel_ctrl_ptr; // Get the address of the current front buffer
     clear_screen();
 
-    *(pixel_ctrl_ptr + 1) = (int)&Buffer2;
-    pixel_buffer_start = *(pixel_ctrl_ptr + 1);
+    *(pixel_ctrl_ptr + 1) = (int)&Buffer2; //buffer2 is the back buffer
+    pixel_buffer_start = *(pixel_ctrl_ptr + 1);//drawing happens in buffer 2
     clear_screen();
 
-    /* Peripheral init */
-    init_mouse(ps2_ptr);
-    set_KEY();
+    init_mouse(ps2_ptr);//initialize mouse
+    set_KEY();//enable key0 interrupts
 
-    /* Interrupt setup (identical to your working file 1) */
-    {
-        int mtvec_value  = (int)&handler;
-        int mstatus_mask = 0x8;
-        int mie_value;
+    //INTERRUPT SETUP
+    int mtvec_value  = (int)&handler;
+    int mstatus_mask = 0x8;      
+    int mie_value;
 
-        __asm__ volatile("csrw mtvec, %0"   :: "r"(mtvec_value));
-        __asm__ volatile("csrc mstatus, %0" :: "r"(mstatus_mask));
+    __asm__ volatile("csrw mtvec, %0"    :: "r"(mtvec_value));
+    __asm__ volatile("csrc mstatus, %0"  :: "r"(mstatus_mask)); 
 
-        __asm__ volatile("csrr %0, mie"     : "=r"(mie_value));
-        __asm__ volatile("csrc mie, %0"     :: "r"(mie_value));
+    __asm__ volatile("csrr %0, mie"      : "=r"(mie_value));
+    __asm__ volatile("csrc mie, %0"      :: "r"(mie_value));     
 
-        mie_value = (1 << 18);
-        __asm__ volatile("csrs mie, %0"     :: "r"(mie_value));
-        __asm__ volatile("csrs mstatus, %0" :: "r"(mstatus_mask));
-    }
+    mie_value = (1 << 18);
+    __asm__ volatile("csrs mie, %0"      :: "r"(mie_value));   
+    __asm__ volatile("csrs mstatus, %0"  :: "r"(mstatus_mask));  
+    
 
     while (1) {
-        int sw           = *switch_ptr & 0x1F;
-        int manual_fruit =  sw & 0x1;
+        int sw = *switch_ptr & 0x1F;
+        int manual_fruit = sw & 0x1;
         int manual_bomb  = (sw >> 1) & 0x1;
 
-        /* --- FSM --- */
+        //FSM
         if (current_state == STATE_START) {
             *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x01;
         }
+
         else if (current_state == STATE_PLAY) {
             *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x02;
 
+            //FOR TESTING
             if (manual_fruit) {
                 fruit_count++;
                 current_state = STATE_FRUIT;
@@ -390,50 +407,69 @@ int main(void) {
                 current_state = STATE_BOMB;
             }
             else {
-                while (read_ps2_byte(ps2_ptr, &byte)) {
-                    static int count = 0;
-                    static unsigned char packet[3];
+                //PS2 3 bit packet
+                //byte 1 = status
+                //byte 2 = x
+                //byte 3 = y
+                while (read_ps2_byte(ps2_ptr, &byte)) {//keep looping as long as theres a VALID ps2 byte available
+                    //each time through the loop, byte gets one new byte from the mouse FIFO.
+                    static int count = 0; //how many bytes of the current packet have been collected so far. (static so looping doesnt reset it)
+                    static unsigned char packet[3];//3 bytes of mouse packet
 
-                    packet[count++] = byte;
+                    packet[count++] = byte; 
 
                     if (count == 1) {
-                        if ((packet[0] & 0x08) == 0) { count = 0; }
+                        //Bit 3 of a valid PS/2 mouse packet's first byte is supposed to always be 1. (LINK)
+                        if ((packet[0] & 0x08) == 0) {
+                            count = 0;//restart the count
+                        }
                     }
-                    else if (count == 3) {
-                        int left  =  packet[0] & 0x1;
-                        int right = (packet[0] >> 1) & 0x1;
-
-                        int dx = (int)packet[1] - ((packet[0] & 0x10) ? 256 : 0);
-                        int dy = (int)packet[2] - ((packet[0] & 0x20) ? 256 : 0);
-
+                    else if (count == 3) {//full packet
+                        int left  =  packet[0] & 0x1;//bit 0 of first byte (left mouse button, if pressed becomes 1)
+                        int right = (packet[0] >> 1) & 0x1; //bit 1 of first byte (right click)
+                        
+                        //ps2 is SIGNED, signed is stored in bit 4 of byte 1
+                        int dx = (int)packet[1]; //x movement 
+                        if (packet[0] & 0x10) {
+                            dx = dx - 256;
+                        }
+                        int dy = (int)packet[2]; //y moevement
+                        if(packet[0] & 0x20){
+                            dy = dy - 256;                        }
+    
+                        //first byte has overflow x = bit6 and overflowy = bit7
+                        //if overflow happens, ignore that by setting it to 0
                         if (packet[0] & 0x40) dx = 0;
                         if (packet[0] & 0x80) dy = 0;
 
-                        count = 0;
+                        count = 0;//reset packet count
 
-                        update_cursor_position(dx, dy);
+                        update_cursor_position(dx, dy);//move cursor
 
-                        if (left) {
+                        if (left) {//if left click increase fruit count
                             fruit_count++;
                             current_state = STATE_FRUIT;
                         }
-                        else if (right) {
+                        else if (right) {//bomb hit
                             current_state = STATE_BOMB;
                         }
                     }
                 }
             }
         }
+
         else if (current_state == STATE_FRUIT) {
             *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x04;
             delay();
             current_state = STATE_PLAY;
         }
+
         else if (current_state == STATE_BOMB) {
             *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x08;
             delay();
             current_state = STATE_GAMEOVER;
         }
+
         else if (current_state == STATE_GAMEOVER) {
             *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x10;
         }
@@ -441,7 +477,7 @@ int main(void) {
         /* Record tail snapshot before drawing */
         push_tail(x_pos, y_pos);
 
-        /* Draw frame: tail first (behind cursor), cursor on top */
+        //Draw frame
         clear_screen();
         draw_tail();
         draw_cursor(x_pos, y_pos);
