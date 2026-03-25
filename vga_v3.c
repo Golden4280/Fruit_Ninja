@@ -308,29 +308,7 @@ int main() {
     objects[i].onScreen = 0;
   }
 
-  // // init sprite
-
-  // Object bomb = {.type = BOMB,
-  //                .vx = 1,
-  //                .vy = -8.0f,
-  //                .x = 50,
-  //                .y = 239,
-  //                .w = BOMB_WIDTH,
-  //                .h = BOMB_HEIGHT,
-  //                .g = 0.2f,
-  //                .onScreen = 1,
-  //                .image = Bomb};
-
-  // test object
-  // objects[0].x = 100;
-  // objects[0].y = 120;
-  // objects[0].vx = 0;
-  // objects[0].vy = -9.0f;
-  // objects[0].g = 0.2f;
-  // objects[0].image = Lemon;
-  // objects[0].h = LEMON_HEIGHT;
-  // objects[0].w = LEMON_WIDTH;
-  // objects[0].onScreen = 1;
+  
 
   while (1) {
     pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // new back buffer
