@@ -730,5 +730,6 @@ int main() {
     wait_for_vsync();  // swap front and back buffers on VGA vertical sync
   }
 }
+}
 
 // TESTING ENDED
