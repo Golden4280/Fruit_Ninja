@@ -286,38 +286,50 @@ int main(void) {
                 current_state = STATE_BOMB;
             }
             else {
-                //PS2 packet
-                while (read_ps2_byte(ps2_ptr, &byte)) {
-                    static int count = 0;
-                    static unsigned char packet[3];
+                //PS2 3 bit packet
+                //byte 1 = status
+                //byte 2 = x
+                //byte 3 = y
+                while (read_ps2_byte(ps2_ptr, &byte)) {//keep looping as long as theres a VALID ps2 byte available
+                    //each time through the loop, byte gets one new byte from the mouse FIFO.
+                    static int count = 0; //how many bytes of the current packet have been collected so far. (static so looping doesnt reset it)
+                    static unsigned char packet[3];//3 bytes of mouse packet
 
-                    packet[count++] = byte;
+                    packet[count++] = byte; 
 
                     if (count == 1) {
-                        /* Bit 3 must be 1; if not we're out of sync */
+                        //Bit 3 of a valid PS/2 mouse packet’s first byte is supposed to always be 1. (LINK)
                         if ((packet[0] & 0x08) == 0) {
-                            count = 0;
+                            count = 0;//restart the count
                         }
                     }
-                    else if (count == 3) {
-                        int left  =  packet[0] & 0x1;
-                        int right = (packet[0] >> 1) & 0x1;
-                        int dx = (int)packet[1] - ((packet[0] & 0x10) ? 256 : 0);
-                        int dy = (int)packet[2] - ((packet[0] & 0x20) ? 256 : 0);
-
-                        /* Discard on overflow */
+                    else if (count == 3) {//full packet
+                        int left  =  packet[0] & 0x1;//bit 0 of first byte (left mouse button, if pressed becomes 1)
+                        int right = (packet[0] >> 1) & 0x1; //bit 1 of first byte (right click)
+                        
+                        //ps2 is SIGNED, signed is stored in bit 4 of byte 1
+                        int dx = (int)packet[1]; //x movement 
+                        if (packet[0] & 0x10) {
+                            dx = dx - 256;
+                        }
+                        int dy = (int)packet[2]; //y moevement
+                        if(packet[0] & 0x20){
+                            dy = dy - 256;                        }
+    
+                        //first byte has overflow x = bit6 and overflowy = bit7
+                        //if overflow happens, ignore that by setting it to 0
                         if (packet[0] & 0x40) dx = 0;
                         if (packet[0] & 0x80) dy = 0;
 
-                        count = 0;
+                        count = 0;//reset packet count
 
-                        update_cursor_position(dx, dy);
+                        update_cursor_position(dx, dy);//move cursor
 
-                        if (left) {
+                        if (left) {//if left click increase fruit count
                             fruit_count++;
                             current_state = STATE_FRUIT;
                         }
-                        else if (right) {
+                        else if (right) {//bomb hit
                             current_state = STATE_BOMB;
                         }
                     }
