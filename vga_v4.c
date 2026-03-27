@@ -107,6 +107,13 @@ enum States {
     STATE_GAMEOVER
 };
 
+volatile enum States current_state = STATE_START;
+volatile int fruit_count = 0;
+
+//Cursor positions
+volatile int x_pos = 160;
+volatile int y_pos = 120;
+
 int tail_x[TAIL_LEN]; //stored positions (oldest)
 int tail_y[TAIL_LEN]; 
 int tail_head  = 0; //Points to where the next position will be written.
@@ -720,14 +727,20 @@ int main() {
 
 
     pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // new back buffer
+
     draw_background(play);
+
     add_object();
     physics();
     drawAllObjects();
+
+    push_tail(x_pos, y_pos);
     draw_tail();
-        draw_cursor(x_pos, y_pos);
+    draw_cursor(x_pos, y_pos);
 
     wait_for_vsync();  // swap front and back buffers on VGA vertical sync
+
+    pixel_buffer_start = *(pixel_ctrl_ptr + 1);
   }
 }
 }
