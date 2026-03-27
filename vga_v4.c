@@ -107,6 +107,11 @@ enum States {
     STATE_GAMEOVER
 };
 
+// boolean for state switching
+// no longer using fruit and bomb state
+// instead if bomg_hit == 1 then current_state = gameover else stays in play
+bool bomb_hit = 0;
+
 volatile enum States current_state = STATE_START;
 volatile int fruit_count = 0;
 
@@ -575,6 +580,8 @@ void physics() {
 }
 
 // FRUIT PART ENDED
+
+
 
 int main() {
 
