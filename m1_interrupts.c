@@ -21,9 +21,9 @@
 #define GAMEOVER 0x8  // ledr5
 
 // global variables
-volatile int high_score = 0;
+//volatile int high_score = 0;
 volatile int state = START;  // start as default idle state
-volatile int score = 0;      // output score starts at 0
+//volatile int score = 0;      // output score starts at 0
 
 // helper functions and isr
 static void handler(void) __attribute__((interrupt("machine")));

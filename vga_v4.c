@@ -50,6 +50,8 @@ typedef struct {
 
 #define MAX_OBJECTS 7
 Object objects[MAX_OBJECTS];
+#define obj_h 48
+#define obj_w 48
 
 // FUNCTIONS
 
@@ -111,6 +113,11 @@ enum States {
 // no longer using fruit and bomb state
 // instead if bomg_hit == 1 then current_state = gameover else stays in play
 bool bomb_hit = 0;
+
+// global scoring variable
+// and high score variable for when in gaemover
+int score = 0;
+int high_score = 0;
 
 volatile enum States current_state = STATE_START;
 volatile int fruit_count = 0;
@@ -701,7 +708,7 @@ int main() {
 
                         count = 0;//reset packet count
 
-                        update_cursor_position(dx, dy);//move cursor
+                        update_cursor_position(dx, dy); //move cursor
 
                         if (left) {//if left click increase fruit count
                             fruit_count++;
