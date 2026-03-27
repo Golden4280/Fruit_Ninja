@@ -52,4 +52,21 @@ void collisions() {
 
 
 // draw score function
-// but for now just hex display
+
+// start display at 000
+// decode score function
+// draw score every loop if collision occurs
+// if score %10 = 0 then only change ones
+
+void update_score() {
+    int ones = score % 10;
+    int tens = (score / 10) % 10;
+    int hunds = (score / 100) % 10;
+}
+
+// take num and return the number to be printed
+void decode_score(int num) {
+    switch (num) 
+        case 0: 
+
+}

@@ -17,6 +17,18 @@
 #include "start.h"
 #include "gameover.h"
 
+// numbers 
+#include "_0.h"
+#include "_1.h"
+#include "_2.h"
+#include "_3.h"
+#include "_4.h"
+#include "_5.h"
+#include "_6.h"
+#include "_7.h"
+#include "_8.h"
+#include "_9.h"
+
 // struct
 typedef enum {
   APPLE,
@@ -47,6 +59,19 @@ typedef struct {
   const unsigned short* image;
 
 } Object;
+
+const unsigned short* numbers[10] = {
+  _0, 
+  _1, 
+  _2, 
+  _3, 
+  _4, 
+  _5, 
+  _6, 
+  _7, 
+  _8, 
+  _9
+}
 
 #define MAX_OBJECTS 7
 Object objects[MAX_OBJECTS];
