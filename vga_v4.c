@@ -560,6 +560,7 @@ void physics() {
   // when object is off screen
   if (objects[i].y > 240 + objects[i].h) {
     objects[i].onScreen = 0;
+    
   }
 
   }

@@ -76,7 +76,93 @@ void draw_gameover_scores(int score, int high_score) {
 
 
 
+int miss_count = 0;
 
+// inside physics
+miss_count++;
+
+// inside state condition
+|| miss_count < 3
+
+
+
+
+// bomb exploding function
+// start point takes in bomb start coord and adds offset to start from center
+// draws white lines from bomb
+// calls delay
+
+// DRAW LINE FUNCTION
+void draw_line(int x0, int y0, int x1, int y1, short int line_color) 
+{
+
+	// used to determine how to navigate line
+	bool is_steep = abs(y1-y0) > abs(x1-x0);
+	
+	// for calulation
+	if (is_steep) {
+		// complete algorithm vertically instead of horizonatally
+		swap(&x0, &y0);
+		swap(&x1, &y1);
+	
+	}
+	if (x0 > x1) {
+		// point 1 ahead of point 2 then swap
+		// drawing L -> R always
+		swap(&x0, &x1);
+		swap(&y0, &y1);
+	}
+
+	// total distance covered
+	int deltax = x1 - x0;
+	// verified x before, ensure y is aboslute for up/down
+	int deltay = abs(y1 - y0); // why absolute here?
+	
+	// round to nearest pixel
+	// used to determine when we "enter" a new pixel
+	int error = -(deltax/2);
+	int y = y0;
+	// which direction to move in y
+	// if point 1 > then we move down else move up
+	int y_step;
+	if (y0 > y1) 
+	{
+	y_step = -1;
+	} else {
+		y_step = 1;
+	}
+	
+	for (int x = x0; x <= x1; x++) {
+		if (is_steep) {
+		plot_pixel(y, x, line_color);
+		} else {
+		plot_pixel(x, y, line_color);
+		}
+		// increment error for pixel calculation
+		error = error + deltay;
+	
+		// when we meet threshold, increment y to next
+		// reset error tracker for next loop
+		if (error > 0) {
+		y = y + y_step;
+		error = error - deltax;
+	
+		}		
+	}
+}
+
+// SWAP
+void swap(int* a, int* b) {
+	int temp = *a;
+	*a = *b;
+	*b = temp;
+
+}
+
+
+
+
+// FUNCTION END
 
 
 
