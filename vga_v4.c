@@ -654,14 +654,14 @@ void clear_text_area(int x, int y, int len) {
 }
 
 // SINCE char is 8x16 charx = pixelx/8 and chary = pixely/16
-#define CHAR_X_1 (134/8)
-#define CHAR_Y_1 (140/16)
-#define CHAR_X_2 (134/8)
-#define CHAR_Y_2 (160/16)
+#define CHAR_X_1 (160/8)
+#define CHAR_Y_1 (256/16)
+#define CHAR_X_2 (160/8)
+#define CHAR_Y_2 (288/16)
 
 
 void draw_score_top(int score) {
-    char buffer[4];
+    char buffer[16];
     // format as 3 digits, padded with zeros
     sprintf(buffer, "%03d", score);
 
@@ -674,16 +674,16 @@ void draw_score_top(int score) {
 
 
 void draw_gameover_scores(int score, int high_score) {
-    char line1[20];
-    char line2[20];
+    char line1[32];
+    char line2[32];
 
-    sprintf(line1, "SCORE: %03d", score);
-    sprintf(line2, "HIGH SCORE:  %03d", high_score);
+    sprintf(line1, "SCORE:      %03d", score);
+    sprintf(line2, "HIGH SCORE: %03d", high_score);
 
     // Clear a region in the middle of the screen
     
-    clear_text_area(10, 8, 40);
-    clear_text_area(10, 10, 40);
+    clear_text_area(0, 16, 80);
+    clear_text_area(0, 18, 80);
 
 
     write_string(CHAR_X_1, CHAR_Y_1, line1);
@@ -771,6 +771,7 @@ int main(void) {
     clear_screen();
 
     draw_background(start);
+    clear_text_area(0, 0, 80);
 
     init_mouse(ps2_ptr);//initialize mouse
     //NOTHING CAN CHANGE TO BOMB OR HIT FRUIT RN 
@@ -789,24 +790,38 @@ int main(void) {
         // update fsm from clicks
         switch (current_state) {
             case STATE_START:
-                *LEDR_ptr = 0x01;
+                // *LEDR_ptr = 0x01;
+                // clear all text
+                clear_text_area(0, 0, 80);
+                clear_text_area(0, 16, 80);
+                clear_text_area(0, 18, 80);
                 if (last_left_click) {
                     current_state = STATE_PLAY;
-                    break;
+                    
                 }
+                break;
             case STATE_PLAY:
-                *LEDR_ptr = 0x02;
+                // *LEDR_ptr = 0x02;
                 collisions();
+                *LEDR_ptr = score;
                 if (bomb_hit) {
+                    if (score > high_score) {
+                    high_score = score;
+                    }
                     current_state = STATE_GAMEOVER;
-                    break;
+
+                    
                 }
+                break;
             case STATE_GAMEOVER:
-                *LEDR_ptr = 0x10;
-                if (score > high_score) {
-                    score = high_score;
-                }
+                // *LEDR_ptr = 0x10;
+                clear_text_area(0, 0, 80);
+                
+                *LEDR_ptr = high_score;
                 if (last_right_click) {
+                    score = 0;
+                    old_score = -1;
+                    
                     x_pos = 160;
                     y_pos = 120;
                     tail_head = 0;
@@ -815,8 +830,9 @@ int main(void) {
                     tail_last_y = 120;
                     bomb_hit = 0;
                     current_state = STATE_START;
-                    break;
+                    
                 }
+                break;
 
         }
 
@@ -838,6 +854,7 @@ int main(void) {
 
             // update score display
             draw_score_top(score);
+            
 
             push_tail(x_pos, y_pos);
             draw_tail();
@@ -848,8 +865,7 @@ int main(void) {
             draw_background(gameover);
 
             draw_gameover_scores(score, high_score);
-            score = 0;
-            old_score = -1;
+            
 
         }
     
