@@ -18,18 +18,6 @@
 #include "start.h"
 #include "gameover.h"
 
-// numbers 
-#include "_0.h"
-#include "_1.h"
-#include "_2.h"
-#include "_3.h"
-#include "_4.h"
-#include "_5.h"
-#include "_6.h"
-#include "_7.h"
-#include "_8.h"
-#include "_9.h"
-
 // struct
 typedef enum {
   APPLE,
