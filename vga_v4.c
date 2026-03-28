@@ -618,6 +618,9 @@ void collisions() {
                                     score += 1;
                                     
                                 }
+                            
+                                objects[i].onScreen = 0;
+                                return;
                             }
                         }
                     }
@@ -654,10 +657,10 @@ void clear_text_area(int x, int y, int len) {
 }
 
 // SINCE char is 8x16 charx = pixelx/8 and chary = pixely/16
-#define CHAR_X_1 (160/8)
-#define CHAR_Y_1 (256/16)
-#define CHAR_X_2 (160/8)
-#define CHAR_Y_2 (288/16)
+#define CHAR_X_1 (34)
+#define CHAR_Y_1 (36)
+#define CHAR_X_2 (34)
+#define CHAR_Y_2 (38)
 
 
 void draw_score_top(int score) {
@@ -666,10 +669,10 @@ void draw_score_top(int score) {
     sprintf(buffer, "%03d", score);
 
     // Clear old score area (3 digits)
-    clear_text_area(0, 0, 3);
+    clear_text_area(2, 1, 10);
 
     // Draw new score at top-left
-    write_string(0, 0, buffer);
+    write_string(2, 1, buffer);
 }
 
 
@@ -682,8 +685,8 @@ void draw_gameover_scores(int score, int high_score) {
 
     // Clear a region in the middle of the screen
     
-    clear_text_area(0, 16, 80);
-    clear_text_area(0, 18, 80);
+    clear_text_area(0, CHAR_Y_1, 80);
+    clear_text_area(0, CHAR_Y_2, 80);
 
 
     write_string(CHAR_X_1, CHAR_Y_1, line1);
@@ -771,7 +774,7 @@ int main(void) {
     clear_screen();
 
     draw_background(start);
-    clear_text_area(0, 0, 80);
+    
 
     init_mouse(ps2_ptr);//initialize mouse
     //NOTHING CAN CHANGE TO BOMB OR HIT FRUIT RN 
@@ -792,9 +795,9 @@ int main(void) {
             case STATE_START:
                 // *LEDR_ptr = 0x01;
                 // clear all text
-                clear_text_area(0, 0, 80);
-                clear_text_area(0, 16, 80);
-                clear_text_area(0, 18, 80);
+                clear_text_area(2, 1, 10);
+                clear_text_area(CHAR_X_1, CHAR_Y_1, 80);
+                clear_text_area(CHAR_X_2, CHAR_Y_2, 80);
                 if (last_left_click) {
                     current_state = STATE_PLAY;
                     
@@ -815,7 +818,9 @@ int main(void) {
                 break;
             case STATE_GAMEOVER:
                 // *LEDR_ptr = 0x10;
-                clear_text_area(0, 0, 80);
+                clear_text_area(2, 1, 10);
+                // clear_text_area(CHAR_X_1, CHAR_Y_1, 80);
+                // clear_text_area(CHAR_X_2, CHAR_Y_2, 80);
                 
                 *LEDR_ptr = high_score;
                 if (last_right_click) {

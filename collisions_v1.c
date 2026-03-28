@@ -86,7 +86,7 @@ void draw_gameover_scores(int score, int high_score) {
 
 
 
-
+// 
 void collisions() {
 
     // // use x_pos and y_pos 
@@ -121,6 +121,9 @@ void collisions() {
                                     score += 1;
                                     
                                 }
+
+                                objects[i].onScreen = 0;
+                                return;
                             }
                         }
                     }
@@ -128,7 +131,6 @@ void collisions() {
             }
         }
     }
-
 
 // draw score function
 
