@@ -10,6 +10,69 @@
 
 // return global boolean
 
+// new scoring logic using vga buffer
+#define VGA_CHAR_BUFFER 0x09000000
+
+
+void write_char(int x, int y, char c) {
+    volatile char *char_buffer = (char *)CHAR_BUFFER_BASE;
+    char_buffer[y * 128 + x] = c;
+}
+
+void write_string(int x, int y, const char* str) {
+    while (*str) {
+        write_char(x++, y, *str++);
+    }
+}
+
+void clear_text_area(int x, int y, int len) {
+    for (int i = 0; i < len; i++)
+        write_char(x + i, y, ' ');
+}
+
+
+void draw_score_top(int score) {
+    char buffer[4];
+    // format as 3 digits, padded with zeros
+    sprintf(buffer, "%03d", score);
+
+    // Clear old score area (3 digits)
+    clear_text_area(0, 0, 3);
+
+    // Draw new score at top-left
+    write_string(0, 0, buffer);
+}
+
+
+void draw_gameover_scores(int score, int high_score) {
+    char line1[20];
+    char line2[20];
+
+    sprintf(line1, "SCORE: %03d", score);
+    sprintf(line2, "HIGH:  %03d", high_score);
+
+    // Clear a region in the middle of the screen
+    for (int i = 20; i < 30; i++)
+        clear_text_area(20, i, 40);
+
+    write_string(30, 24, line1);
+    write_string(30, 26, line2);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void collisions() {
 
     // // use x_pos and y_pos 

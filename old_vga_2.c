@@ -627,55 +627,110 @@ void collisions() {
     }
 
 
-//scoring use vga character buffer
-#define VGA_CHAR_BUFFER 0x09000000
+// draw score function
 
+// start display at 000
+// decode score function
+// draw score every loop if collision occurs
+// if score %10 = 0 then only change ones
 
-void write_char(int x, int y, char c) {
-    volatile char *char_buffer = (char *)CHAR_BUFFER_BASE;
-    char_buffer[y * 128 + x] = c;
-}
+// dimensions of score sprites
+#define NUM_W 16 
+#define NUM_H 32
 
-void write_string(int x, int y, const char* str) {
-    while (*str) {
-        write_char(x++, y, *str++);
+// location of score starting point and distance between pixels 
+// 100s at 10, 10
+// 10s at 10 + 16 + 2, 10
+// 1s at 10 + 2*16 + 2*2, 10
+// 2 rep number spacing
+#define HUND_START 10 
+#define TEN_START 28
+#define ONE_START 46
+#define SCORE_Y 10
+
+#define SPACING 2
+#define SC_X_1 134
+#define SC_Y_1 140
+#define SC_X_2 134
+#define SC_Y_2 160
+
+// write score as 000 before play
+
+// take num and return the number to be printed
+const unsigned short* decode_score(int num) {
+    switch (num) {
+        case 0: return _0;
+        case 1: return _1;
+        case 2: return _2;
+        case 3: return _3;
+        case 4: return _4;
+        case 5: return _5;
+        case 6: return _6;
+        case 7: return _7;
+        case 8: return _8;
+        case 9: return _9;
+        default: return _0;
     }
 }
 
-void clear_text_area(int x, int y, int len) {
-    for (int i = 0; i < len; i++)
-        write_char(x + i, y, ' ');
+// potential error is redrawing the same digtis over eachother
+void update_score() {
+
+    // no update if no change check
+    if (score == old_score) { return; }
+
+    // isolate digits from score
+    int ones = score % 10;
+    int tens = (score / 10) % 10;
+    int hunds = (score / 100) % 10;
+
+    // isolate digits from old scroe
+    // int old_ones = old_score % 10; // not actually neeeded
+    int old_tens = (old_score / 10) % 10;
+    int old_hunds = (old_score / 100) % 10;
+
+    // alwasy update ones 
+    // update ones
+    draw_object(ONE_START, SCORE_Y, NUM_W, NUM_H, (decode_score(ones)));
+
+    // if 10s and 100s dont change then dont update display
+    // only called if at least one hit so ones alwasy increments
+    if (tens != old_tens) {
+        // update tens
+        draw_object(TEN_START, SCORE_Y, NUM_W, NUM_H, (decode_score(tens)));
+
+    // only change 10s and 1s
+    } 
+
+    if (hunds != old_hunds) {
+
+        // update huns
+        draw_object(HUND_START, SCORE_Y, NUM_W, NUM_H, (decode_score(hunds)));
+
+    }
+
+    // update old for next time
+    old_score = score;
 }
 
+// takes some score and displays it center screen
+void gameover_score(int sc, int x, int y) {
 
-void draw_score_top(int score) {
-    char buffer[4];
-    // format as 3 digits, padded with zeros
-    sprintf(buffer, "%03d", score);
+    // get digits
+    int ones = sc % 10;
+    int tens = (sc / 10) % 10;
+    int hunds = (sc / 100) % 10;
 
-    // Clear old score area (3 digits)
-    clear_text_area(0, 0, 3);
+    // get start points of each score
+    int one_st = x + 2*(NUM_W + SPACING);
+    int ten_st = x + NUM_W + SPACING;
+    int hund_st = x;
 
-    // Draw new score at top-left
-    write_string(0, 0, buffer);
+    // DRAW OBEJCT FOR ALL THREE
+    draw_object(one_st, y, NUM_W, NUM_H, (decode_score(ones)));
+    draw_object(ten_st, y, NUM_W, NUM_H, (decode_score(tens)));
+    draw_object(hund_st, y, NUM_W, NUM_H, (decode_score(hunds)));
 }
-
-
-void draw_gameover_scores(int score, int high_score) {
-    char line1[20];
-    char line2[20];
-
-    sprintf(line1, "SCORE: %03d", score);
-    sprintf(line2, "HIGH:  %03d", high_score);
-
-    // Clear a region in the middle of the screen
-    for (int i = 20; i < 30; i++)
-        clear_text_area(20, i, 40);
-
-    write_string(30, 24, line1);
-    write_string(30, 26, line2);
-}
-
 
 int last_left_click = 0;
 int last_right_click = 0;
@@ -823,7 +878,7 @@ int main(void) {
             drawAllObjects();
 
             // update score display
-            draw_score_top(score);
+            update_score();
 
             push_tail(x_pos, y_pos);
             draw_tail();
@@ -833,7 +888,8 @@ int main(void) {
         } else if (current_state == STATE_GAMEOVER) {
             draw_background(gameover);
 
-            draw_gameover_scores(score, high_score);
+            gameover_score(score, SC_X_1, SC_Y_1);
+            gameover_score(high_score, SC_X_2, SC_Y_2);
             score = 0;
             old_score = -1;
 

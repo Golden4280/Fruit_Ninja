@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 
 // objects
@@ -17,18 +16,6 @@
 #include "play.h"
 #include "start.h"
 #include "gameover.h"
-
-// numbers 
-#include "_0.h"
-#include "_1.h"
-#include "_2.h"
-#include "_3.h"
-#include "_4.h"
-#include "_5.h"
-#include "_6.h"
-#include "_7.h"
-#include "_8.h"
-#include "_9.h"
 
 // struct
 typedef enum {
@@ -61,23 +48,8 @@ typedef struct {
 
 } Object;
 
-const unsigned short* numbers[10] = {
-  _0, 
-  _1, 
-  _2, 
-  _3, 
-  _4, 
-  _5, 
-  _6, 
-  _7, 
-  _8, 
-  _9
-};
-
 #define MAX_OBJECTS 7
 Object objects[MAX_OBJECTS];
-#define obj_h 48
-#define obj_w 48
 
 // FUNCTIONS
 
@@ -130,19 +102,10 @@ short int Buffer2[240][512];
 enum States {
     STATE_START,
     STATE_PLAY,
+    STATE_FRUIT,
+    STATE_BOMB,
     STATE_GAMEOVER
 };
-
-// boolean for state switching
-// no longer using fruit and bomb state
-// instead if bomg_hit == 1 then current_state = gameover else stays in play
-bool bomb_hit = 0;
-
-// global scoring variable
-// and high score variable for when in gaemover
-int score = 0;
-int high_score = 0;
-int old_score = -1; // for updating
 
 volatile enum States current_state = STATE_START;
 volatile int fruit_count = 0;
@@ -162,7 +125,10 @@ int tail_last_y = 120;
 
 // VGA STUFF WAS HERE IN OG CODE
 
-
+//Interrupt key pasted from lacies code
+static void handler(void) __attribute__((interrupt("machine")));//tells the compiler this function is a machine-mode interrupt handler and should use the correct interrupt
+void KEY_ISR(void);
+void set_KEY(void);
 
 //PS/2 Helper functions
 int  read_ps2_byte(volatile int *ps2_ptr, unsigned char *byte);
@@ -198,6 +164,43 @@ int abs_val(int v) {
     } else {
         return v;
     }
+}
+
+static void handler(void) {
+    int mcause_value;
+    __asm__ volatile("csrr %0, mcause" : "=r"(mcause_value));
+
+    if (mcause_value == 0x80000012) {
+        KEY_ISR();
+    }
+}
+
+void KEY_ISR(void) {
+    volatile int *KEY_ptr = (int *)KEY_BASE;
+    int pressed = *(KEY_ptr + 3); //read edge capture 
+    *(KEY_ptr + 3) = pressed; //clear edge capture
+
+    if (pressed & 0x1) { //if key0 is pressed change state depending on what ur in rn
+        if (current_state == STATE_START) {
+            current_state = STATE_PLAY;
+        }
+        else if (current_state == STATE_GAMEOVER) {
+            fruit_count = 0;
+            x_pos = 160;
+            y_pos = 120;
+            tail_head  = 0;
+            tail_count = 0;
+            tail_last_x = 160;
+            tail_last_y = 120;
+            current_state = STATE_START;
+        }
+    }
+}
+
+void set_KEY(void) {
+    volatile int *KEY_ptr = (int *)KEY_BASE;
+    *(KEY_ptr + 3) = 0xF;  //clear everything
+    *(KEY_ptr + 2) = 0x1;  //enable key0 to interrupt
 }
 
 
@@ -571,280 +574,175 @@ void physics() {
   }
 }
 
-// COLLLISION FUNCTIONS
-// collisions module
-// takes all x coordinate input from mouse position
-// loops through coordinations of each object
-// if equal then check if bomb set state to gameover
-//
-// else check pomogrante +2
-// if neither than incrememtn +1
+// FRUIT PART ENDED
 
-// scoring module
+int main() {
 
-// return global boolean
+  srand(1);
+  volatile int *LEDR_ptr = (int *)LEDR_BASE;
+    volatile int *switch_ptr = (int *)SWITCH_BASE;
+    volatile int *ps2_ptr = (int *)PS2_BASE;
+  volatile int* pixel_ctrl_ptr = (int*)VGA;
+  
+   unsigned char byte;//Stores one byte read from the PS/2 port
 
-void collisions() {
+  // initialize location and direction of rectangles(not shown)
 
-    // // use x_pos and y_pos 
-    // // exit while once bomb is hit
-    // while (bomb_hit == 0) {
-    // actually continuously call functin in play and with each call, check all opbject s and positions
-        for (int i = 0; i < MAX_OBJECTS; i++) {
-            // increment through the entire object (48x48 square)
-            if (objects[i].onScreen) {
-            
-                for (int y = 0; y < obj_h; y++) {
-                    int y1 = objects[i].y + y;
+  // front buffer: current frame
+  // back buffer: next frame
+  // when next display is ready, swap ptrs
 
-                    for (int x = 0; x < obj_w; x++) {
-                        int x1 = objects[i].x + x;
-                    
-                        unsigned short colour = objects[i].image[y * (objects[i].w) + x];
-                        if (colour != TRANSPARENT) {
-                            if ((x1 == x_pos) && (y1 == y_pos)) {
-                            
-                                // check if pom
-                                if (objects[i].type == POMEGRANATE) {
-                                    score += 2;
-                                    
-                                    // also play sound
-                                } else if (objects[i].type == BOMB) {
-                                    // if a bomb is hit, stop checking and return so that we can go to collisions
-                                    bomb_hit = 1;
-                                    return;
-                                } else {
-                                // if any other furit increment by 1
-                                    score += 1;
-                                    
-                                }
-                            }
+  /* set front pixel buffer to Buffer 1 */
+  *(pixel_ctrl_ptr + 1) =
+      (int)&Buffer1;  // first store the address in the  back buffer
+  /* now, swap the front/back buffers, to set the front buffer location */
+  wait_for_vsync();
+  /* initialize a pointer to the pixel buffer, used by drawing functions */
+  pixel_buffer_start = *pixel_ctrl_ptr;
+  clear_screen();  // pixel_buffer_start points to the pixel buffer
+
+  /* set back pixel buffer to Buffer 2 */
+  *(pixel_ctrl_ptr + 1) = (int)&Buffer2;
+  pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // we draw on the back buffer
+  clear_screen();  // pixel_buffer_start points to the pixel buffer
+
+  draw_background(play);
+
+   init_mouse(ps2_ptr);//initialize mouse
+    set_KEY();//enable key0 interrupts
+
+    //INTERRUPT SETUP
+    int mtvec_value  = (int)&handler;
+    int mstatus_mask = 0x8;      
+    int mie_value;
+
+    __asm__ volatile("csrw mtvec, %0"    :: "r"(mtvec_value));
+    __asm__ volatile("csrc mstatus, %0"  :: "r"(mstatus_mask)); 
+
+    __asm__ volatile("csrr %0, mie"      : "=r"(mie_value));
+    __asm__ volatile("csrc mie, %0"      :: "r"(mie_value));     
+
+    mie_value = (1 << 18);
+    __asm__ volatile("csrs mie, %0"      :: "r"(mie_value));   
+    __asm__ volatile("csrs mstatus, %0"  :: "r"(mstatus_mask));
+
+  // INITIALIZE OBJECT ARRAY
+  for (int i = 0; i < MAX_OBJECTS; i++) {
+    objects[i].onScreen = 0;
+  }
+
+
+
+  while (1) {
+
+     while (1) {
+        int sw = *switch_ptr & 0x1F;
+        int manual_fruit = sw & 0x1;
+        int manual_bomb  = (sw >> 1) & 0x1;
+
+        //FSM
+        if (current_state == STATE_START) {
+            *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x01;
+        }
+
+        else if (current_state == STATE_PLAY) {
+            *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x02;
+
+            //FOR TESTING
+            if (manual_fruit) {
+                fruit_count++;
+                current_state = STATE_FRUIT;
+            }
+            else if (manual_bomb) {
+                current_state = STATE_BOMB;
+            }
+            else {
+                //PS2 3 bit packet
+                //byte 1 = status
+                //byte 2 = x
+                //byte 3 = y
+                while (read_ps2_byte(ps2_ptr, &byte)) {//keep looping as long as theres a VALID ps2 byte available
+                    //each time through the loop, byte gets one new byte from the mouse FIFO.
+                    static int count = 0; //how many bytes of the current packet have been collected so far. (static so looping doesnt reset it)
+                    static unsigned char packet[3];//3 bytes of mouse packet
+
+                    packet[count++] = byte; 
+
+                    if (count == 1) {
+                        //Bit 3 of a valid PS/2 mouse packet's first byte is supposed to always be 1. (LINK)
+                        if ((packet[0] & 0x08) == 0) {
+                            count = 0;//restart the count
+                        }
+                    }
+                    else if (count == 3) {//full packet
+                        int left  =  packet[0] & 0x1;//bit 0 of first byte (left mouse button, if pressed becomes 1)
+                        int right = (packet[0] >> 1) & 0x1; //bit 1 of first byte (right click)
+                        
+                        //ps2 is SIGNED, signed is stored in bit 4 of byte 1
+                        int dx = (int)packet[1]; //x movement 
+                        if (packet[0] & 0x10) {
+                            dx = dx - 256;
+                        }
+                        int dy = (int)packet[2]; //y moevement
+                        if(packet[0] & 0x20){
+                            dy = dy - 256;                        }
+    
+                        //first byte has overflow x = bit6 and overflowy = bit7
+                        //if overflow happens, ignore that by setting it to 0
+                        if (packet[0] & 0x40) dx = 0;
+                        if (packet[0] & 0x80) dy = 0;
+
+                        count = 0;//reset packet count
+
+                        update_cursor_position(dx, dy);//move cursor
+
+                        if (left) {//if left click increase fruit count
+                            fruit_count++;
+                            current_state = STATE_FRUIT;
+                        }
+                        else if (right) {//bomb hit
+                            current_state = STATE_BOMB;
                         }
                     }
                 }
             }
         }
-    }
 
-
-//scoring use vga character buffer
-#define VGA_CHAR_BUFFER 0x09000000
-
-
-void write_char(int x, int y, char c) {
-    volatile char *char_buffer = (char *)CHAR_BUFFER_BASE;
-    char_buffer[y * 128 + x] = c;
-}
-
-void write_string(int x, int y, const char* str) {
-    while (*str) {
-        write_char(x++, y, *str++);
-    }
-}
-
-void clear_text_area(int x, int y, int len) {
-    for (int i = 0; i < len; i++)
-        write_char(x + i, y, ' ');
-}
-
-
-void draw_score_top(int score) {
-    char buffer[4];
-    // format as 3 digits, padded with zeros
-    sprintf(buffer, "%03d", score);
-
-    // Clear old score area (3 digits)
-    clear_text_area(0, 0, 3);
-
-    // Draw new score at top-left
-    write_string(0, 0, buffer);
-}
-
-
-void draw_gameover_scores(int score, int high_score) {
-    char line1[20];
-    char line2[20];
-
-    sprintf(line1, "SCORE: %03d", score);
-    sprintf(line2, "HIGH:  %03d", high_score);
-
-    // Clear a region in the middle of the screen
-    for (int i = 20; i < 30; i++)
-        clear_text_area(20, i, 40);
-
-    write_string(30, 24, line1);
-    write_string(30, 26, line2);
-}
-
-
-int last_left_click = 0;
-int last_right_click = 0;
-
-// PS2 processing function 
-void process_mouse_input(volatile int *ps2_ptr) {
-    unsigned char byte;//Stores one byte read from the PS/2 port
-    static int count = 0; //how many bytes of the current packet have been collected so far. (static so looping doesnt reset it)
-    static unsigned char packet[3];//3 bytes of mouse packet
-
-    
-    last_left_click = 0;
-    last_right_click = 0;
-
-
-     while (read_ps2_byte(ps2_ptr, &byte)) {
-                packet[count++] = byte; 
-
-                if (count == 1) {
-                    //Bit 3 of a valid PS/2 mouse packet's first byte is supposed to always be 1. (LINK)
-                    if ((packet[0] & 0x08) == 0) {
-                        count = 0;//restart the count
-                    }
-                }
-                else if (count == 3) {//full packet
-
-                    
-                    int left  =  packet[0] & 0x01;
-                    int right = (packet[0] >> 1) & 0x01;
-
-                    //ps2 is SIGNED, signed is stored in bit 4 of byte 1
-                    int dx = (int)packet[1]; //x movement 
-                    if (packet[0] & 0x10) {
-                        dx = dx - 256;
-                    }
-                    int dy = (int)packet[2]; //y movement
-                    if(packet[0] & 0x20){
-                        dy = dy - 256;
-                    }
-
-                    //first byte has overflow x = bit6 and overflowy = bit7
-                    //if overflow happens, ignore that by setting it to 0
-                    if (packet[0] & 0x40) dx = 0;
-                    if (packet[0] & 0x80) dy = 0;
-
-                    
-
-                    update_cursor_position(dx, dy);//move cursor
-
-                   
-                    last_left_click = left;
-                    last_right_click = right;
-
-                     count = 0;//reset packet count
-                }
-
-}
-}
-
-
-// FRUIT PART ENDED
-
-int main(void) {
-    srand(1);
-    volatile int *LEDR_ptr = (int *)LEDR_BASE;
-    volatile int *ps2_ptr = (int *)PS2_BASE;
-    volatile int *pixel_ctrl_ptr = (int*)VGA;
-
-    // unsigned char byte;//Stores one byte read from the PS/2 port
-
-    //double buffer
-    *(pixel_ctrl_ptr + 1) = (int)&Buffer1;//buffer1 is the back buffer
-    wait_for_vsync();//Swap buffers at the next vertical sync
-    pixel_buffer_start = *pixel_ctrl_ptr; // Get the address of the current front buffer
-    clear_screen();
-
-    *(pixel_ctrl_ptr + 1) = (int)&Buffer2; //buffer2 is the back buffer
-    pixel_buffer_start = *(pixel_ctrl_ptr + 1);//drawing happens in buffer 2
-    clear_screen();
-
-    draw_background(start);
-
-    init_mouse(ps2_ptr);//initialize mouse
-    //NOTHING CAN CHANGE TO BOMB OR HIT FRUIT RN 
-
-    // INITIALIZE OBJECT ARRAY
-    for (int i = 0; i < MAX_OBJECTS; i++) {
-        objects[i].onScreen = 0;
-    }
-
-    while (1) {
-        //FSM
-
-        // process mouse input FIRST
-        process_mouse_input(ps2_ptr);
-
-        // update fsm from clicks
-        switch (current_state) {
-            case STATE_START:
-                *LEDR_ptr = 0x01;
-                if (last_left_click) {
-                    current_state = STATE_PLAY;
-                    break;
-                }
-            case STATE_PLAY:
-                *LEDR_ptr = 0x02;
-                collisions();
-                if (bomb_hit) {
-                    current_state = STATE_GAMEOVER;
-                    break;
-                }
-            case STATE_GAMEOVER:
-                *LEDR_ptr = 0x10;
-                if (score > high_score) {
-                    score = high_score;
-                }
-                if (last_right_click) {
-                    x_pos = 160;
-                    y_pos = 120;
-                    tail_head = 0;
-                    tail_count = 0;
-                    tail_last_x = 160;
-                    tail_last_y = 120;
-                    bomb_hit = 0;
-                    current_state = STATE_START;
-                    break;
-                }
-
+        else if (current_state == STATE_FRUIT) {
+            *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x04;
+            delay();
+            current_state = STATE_PLAY;
         }
 
-       
-
-        pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // new back buffer
-
-        // background updates based on states
-
-        if (current_state == STATE_START) {
-            draw_background(start);
-
-        } else if (current_state == STATE_PLAY) {
-            draw_background(play);
-
-            add_object();
-            physics();
-            drawAllObjects();
-
-            // update score display
-            draw_score_top(score);
-
-            push_tail(x_pos, y_pos);
-            draw_tail();
-            draw_cursor(x_pos, y_pos);
-
-
-        } else if (current_state == STATE_GAMEOVER) {
-            draw_background(gameover);
-
-            draw_gameover_scores(score, high_score);
-            score = 0;
-            old_score = -1;
-
+        else if (current_state == STATE_BOMB) {
+            *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x08;
+            delay();
+            current_state = STATE_GAMEOVER;
         }
-    
-        // WAIT FOR VSYNC
 
-        wait_for_vsync();  // swap front and back buffers on VGA vertical sync
+        else if (current_state == STATE_GAMEOVER) {
+            *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x10;
+        }
 
-        pixel_buffer_start = *(pixel_ctrl_ptr + 1);
-    }
 
-    return 0;
+
+    pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // new back buffer
+
+    draw_background(play);
+
+    add_object();
+    physics();
+    drawAllObjects();
+
+    push_tail(x_pos, y_pos);
+    draw_tail();
+    draw_cursor(x_pos, y_pos);
+
+    wait_for_vsync();  // swap front and back buffers on VGA vertical sync
+
+    pixel_buffer_start = *(pixel_ctrl_ptr + 1);
+  }
 }
+}
+
+// TESTING ENDED
