@@ -143,6 +143,7 @@ bool bomb_hit = 0;
 // and high score variable for when in gaemover
 int score = 0;
 int high_score = 0;
+int prev_score = 0; // for updating
 
 volatile enum States current_state = STATE_START;
 volatile int fruit_count = 0;
