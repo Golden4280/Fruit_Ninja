@@ -76,13 +76,12 @@ void draw_gameover_scores(int score, int high_score) {
 
 
 
-int miss_count = 0;
 
-// inside physics
-miss_count++;
+
+
 
 // inside state condition
-|| miss_count < 3
+
 
 
 

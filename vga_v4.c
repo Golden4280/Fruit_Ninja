@@ -137,6 +137,7 @@ bool bomb_hit = 0;
 int score = 0;
 int high_score = 0;
 int old_score = -1; // for updating
+int miss_count = 0;
 
 volatile enum States current_state = STATE_START;
 volatile int fruit_count = 0;
@@ -560,6 +561,8 @@ void physics() {
   // when object is off screen
   if (objects[i].y > 240 + objects[i].h) {
     objects[i].onScreen = 0;
+    // inside physics
+    miss_count++;
     
   }
 
@@ -817,7 +820,7 @@ int main(void) {
                 // *LEDR_ptr = 0x02;
                 collisions();
                 *LEDR_ptr = score;
-                if (bomb_hit) {
+                if (bomb_hit || miss_count < 3) {
                     if (score > high_score) {
                     high_score = score;
                     }
