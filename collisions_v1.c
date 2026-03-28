@@ -33,6 +33,7 @@ void collisions() {
                                 // check if pom
                                 if (objects[i].type == POMEGRANATE) {
                                     score += 2;
+                                    
                                     // also play sound
                                 } else if (objects[i].type == BOMB) {
                                     // if a bomb is hit, stop checking and return so that we can go to collisions
@@ -41,6 +42,7 @@ void collisions() {
                                 } else {
                                 // if any other furit increment by 1
                                     score += 1
+                                    
                                 }
                             }
                         }
@@ -70,8 +72,12 @@ void collisions() {
 #define HUND_START 10 
 #define TEN_START 28
 #define ONE_START 46
-#define SCORE_Y 10
- 
+
+#define SPACING 2
+#define SC_X_1 134
+#define SC_Y_1 140
+#define SC_X_2 134
+#define SC_Y_2 160
 
 // write score as 000 before play
 
@@ -91,10 +97,11 @@ const unsigned short* decode_score(int num) {
         default: return _0;
 }
 
+// potential error is redrawing the same digtis over eachother
 void update_score() {
 
     // no update if no change check
-    if (score == oldscore) { return; }
+    if (score == old_score) { return; }
 
     // isolate digits from score
     int ones = score % 10;
@@ -129,4 +136,203 @@ void update_score() {
     // update old for next time
     old_score = score;
 }
+
+// takes some score and displays it center screen
+void gameover_score(int sc, int x, int y) {
+
+    // get digits
+    int ones = sc % 10;
+    int tens = (sc / 10) % 10;
+    int hunds = (sc / 100) % 10;
+
+    // get start points of each score
+    int one_st = x + 2*(NUM_W + SPACING);
+    int ten_st = x + NUM_W + SPACING;
+    int hund_st = x;
+
+    // DRAW OBEJCT FOR ALL THREE
+    draw_object(one_st, y, NUM_W, NUM_H, (decode_score(ones)));
+    draw_object(ten_st, y, NUM_W, NUM_H, (decode_score(tens)));
+    draw_object(hund_st, y, NUM_W, NUM_H, (decode_score(hunds)));
+}
+
+
+// OLD MAIN JIC
+
+
+int main() {
+
+  srand(1);
+  volatile int *LEDR_ptr = (int *)LEDR_BASE;
+    volatile int *switch_ptr = (int *)SWITCH_BASE;
+    volatile int *ps2_ptr = (int *)PS2_BASE;
+  volatile int* pixel_ctrl_ptr = (int*)VGA;
+  
+   unsigned char byte;//Stores one byte read from the PS/2 port
+
+  // initialize location and direction of rectangles(not shown)
+
+  // front buffer: current frame
+  // back buffer: next frame
+  // when next display is ready, swap ptrs
+
+  /* set front pixel buffer to Buffer 1 */
+  *(pixel_ctrl_ptr + 1) =
+      (int)&Buffer1;  // first store the address in the  back buffer
+  /* now, swap the front/back buffers, to set the front buffer location */
+  wait_for_vsync();
+  /* initialize a pointer to the pixel buffer, used by drawing functions */
+  pixel_buffer_start = *pixel_ctrl_ptr;
+  clear_screen();  // pixel_buffer_start points to the pixel buffer
+
+  /* set back pixel buffer to Buffer 2 */
+  *(pixel_ctrl_ptr + 1) = (int)&Buffer2;
+  pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // we draw on the back buffer
+  clear_screen();  // pixel_buffer_start points to the pixel buffer
+
+  draw_background(play);
+
+   init_mouse(ps2_ptr);//initialize mouse
+    set_KEY();//enable key0 interrupts
+
+    //INTERRUPT SETUP
+    int mtvec_value  = (int)&handler;
+    int mstatus_mask = 0x8;      
+    int mie_value;
+
+    __asm__ volatile("csrw mtvec, %0"    :: "r"(mtvec_value));
+    __asm__ volatile("csrc mstatus, %0"  :: "r"(mstatus_mask)); 
+
+    __asm__ volatile("csrr %0, mie"      : "=r"(mie_value));
+    __asm__ volatile("csrc mie, %0"      :: "r"(mie_value));     
+
+    mie_value = (1 << 18);
+    __asm__ volatile("csrs mie, %0"      :: "r"(mie_value));   
+    __asm__ volatile("csrs mstatus, %0"  :: "r"(mstatus_mask));
+
+  // INITIALIZE OBJECT ARRAY
+  for (int i = 0; i < MAX_OBJECTS; i++) {
+    objects[i].onScreen = 0;
+  }
+
+
+
+  while (1) {
+
+     while (1) {
+        int sw = *switch_ptr & 0x1F;
+        int manual_fruit = sw & 0x1;
+        int manual_bomb  = (sw >> 1) & 0x1;
+
+        //FSM
+        if (current_state == STATE_START) {
+            *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x01;
+        }
+
+        else if (current_state == STATE_PLAY) {
+            *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x02;
+
+            //FOR TESTING
+            if (manual_fruit) {
+                fruit_count++;
+                current_state = STATE_FRUIT;
+            }
+            else if (manual_bomb) {
+                current_state = STATE_BOMB;
+            }
+            else {
+                //PS2 3 bit packet
+                //byte 1 = status
+                //byte 2 = x
+                //byte 3 = y
+                while (read_ps2_byte(ps2_ptr, &byte)) {//keep looping as long as theres a VALID ps2 byte available
+                    //each time through the loop, byte gets one new byte from the mouse FIFO.
+                    static int count = 0; //how many bytes of the current packet have been collected so far. (static so looping doesnt reset it)
+                    static unsigned char packet[3];//3 bytes of mouse packet
+
+                    packet[count++] = byte; 
+
+                    if (count == 1) {
+                        //Bit 3 of a valid PS/2 mouse packet's first byte is supposed to always be 1. (LINK)
+                        if ((packet[0] & 0x08) == 0) {
+                            count = 0;//restart the count
+                        }
+                    }
+                    else if (count == 3) {//full packet
+                        int left  =  packet[0] & 0x1;//bit 0 of first byte (left mouse button, if pressed becomes 1)
+                        int right = (packet[0] >> 1) & 0x1; //bit 1 of first byte (right click)
+                        
+                        //ps2 is SIGNED, signed is stored in bit 4 of byte 1
+                        int dx = (int)packet[1]; //x movement 
+                        if (packet[0] & 0x10) {
+                            dx = dx - 256;
+                        }
+                        int dy = (int)packet[2]; //y moevement
+                        if(packet[0] & 0x20){
+                            dy = dy - 256;                        }
+    
+                        //first byte has overflow x = bit6 and overflowy = bit7
+                        //if overflow happens, ignore that by setting it to 0
+                        if (packet[0] & 0x40) dx = 0;
+                        if (packet[0] & 0x80) dy = 0;
+
+                        count = 0;//reset packet count
+
+                        update_cursor_position(dx, dy); //move cursor
+
+                        if (left) {//if left click increase fruit count
+                            fruit_count++;
+                            current_state = STATE_FRUIT;
+                        }
+                        else if (right) {//bomb hit
+                            current_state = STATE_BOMB;
+                        }
+                    }
+                }
+            }
+        }
+
+        else if (current_state == STATE_FRUIT) {
+            *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x04;
+            delay();
+            current_state = STATE_PLAY;
+        }
+
+        else if (current_state == STATE_BOMB) {
+            *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x08;
+            delay();
+            current_state = STATE_GAMEOVER;
+        }
+
+        else if (current_state == STATE_GAMEOVER) {
+            *LEDR_ptr = ((fruit_count & 0x1F) << 5) | 0x10;
+        }
+
+
+
+        
+
+
+    pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // new back buffer
+
+    draw_background(play);
+
+    add_object();
+    physics();
+    drawAllObjects();
+
+    // update score display
+    update_score();
+
+    push_tail(x_pos, y_pos);
+    draw_tail();
+    draw_cursor(x_pos, y_pos);
+
+    wait_for_vsync();  // swap front and back buffers on VGA vertical sync
+
+    pixel_buffer_start = *(pixel_ctrl_ptr + 1);
+  }
+}
+}
+
 

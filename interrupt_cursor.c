@@ -129,8 +129,8 @@ void clear_ps2_fifo(volatile int *ps2_ptr) {//what happens when we call clear
     }
 }
 
-//polling 
-//keep waiting for RVALID=1 and a byte arrives, or timeout expires
+// polling 
+// keep waiting for RVALID=1 and a byte arrives, or timeout expires
 int wait_for_ps2_byte(volatile int *ps2_ptr, unsigned char *byte, int timeout) {
     while (timeout > 0) {
         if (read_ps2_byte(ps2_ptr, byte) == 1) {
