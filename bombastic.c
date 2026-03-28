@@ -17,8 +17,7 @@ struct audio_t {
 volatile struct audio_t * audiop = ((struct audio_t *)0xff203040);
 
 
-void 
-audio_playback_mono(int *Game_start_packed, int n, int step, int replicate) {
+void audio_playback_mono(int *Game_start_packed, int n, int step, int replicate) {
             int i;
 
             audiop->control = 0x8; // clear the output FIFOs
@@ -34,8 +33,7 @@ audio_playback_mono(int *Game_start_packed, int n, int step, int replicate) {
 	}	
 
 
-int 
-main(void) {
+int main(void) {
    audio_playback_mono(Game_start_packed, Game_start_packed_len, 1, 1);
    while (1);
 }
