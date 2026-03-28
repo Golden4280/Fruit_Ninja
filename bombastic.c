@@ -30,7 +30,7 @@ void audio_playback_mono(int *Game_start_packed, int n, int step, int replicate)
                 audiop->rdata = Game_start_packed[i];
 			  }
 			}
-	}	
+}	
 
 
 int main(void) {

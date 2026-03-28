@@ -13,6 +13,9 @@
 #include "Pomegranate.h"
 #include "Bomb.h"
 
+//sounds
+#include "start_sound.h"
+
 // screens
 #include "play.h"
 #include "start.h"
@@ -54,6 +57,21 @@ Object objects[MAX_OBJECTS];
 #define obj_h 48
 #define obj_w 48
 
+//AUDIO STRUCT
+struct audio_t {
+	volatile unsigned int control;
+	volatile unsigned char rarc;
+	volatile unsigned char ralc;
+	volatile unsigned char warc;
+	volatile unsigned char walc;
+    volatile unsigned int ldata;
+	volatile unsigned int rdata;
+};
+volatile struct audio_t * audiop = ((struct audio_t *)0xff203040);
+
+//AUDIO INITIALIZE
+static int Game_start_packed_len = sizeof(Game_start_packed) / sizeof(Game_start_packed[0]);
+
 // FUNCTIONS
 
 void plot_pixel(int x, int y, short int colour);
@@ -64,6 +82,7 @@ void physics();
 void draw_background(const unsigned short* bg);
 void draw_object(int x0, int y0, int w, int h, const unsigned short* obj);
 void drawAllObjects();
+void audio_playback_mono(int *Game_start_packed, int n, int step, int replicate);
 
 
 // DEFINED THINGS
@@ -671,6 +690,7 @@ void draw_gameover_scores(int score, int high_score) {
 
 int last_left_click = 0;
 int last_right_click = 0;
+int start_sound_played = 0;
 
 // PS2 processing function 
 void process_mouse_input(volatile int *ps2_ptr) {
@@ -726,7 +746,21 @@ void process_mouse_input(volatile int *ps2_ptr) {
 
 }
 }
+//AUDIO FUNCTION
+void audio_playback_mono(int *Game_start_packed, int n, int step, int replicate) {
+            int i;
 
+            audiop->control = 0x8; // clear the output FIFOs
+            audiop->control = 0x0; // resume input conversion
+            for (i = 0; i < n; i+=step) {
+              // output data if there is space in the output FIFOs
+              for (int r=0; r < replicate; r++) {
+				while(audiop->warc == 0);
+                audiop->ldata = Game_start_packed[i];
+                audiop->rdata = Game_start_packed[i];
+			  }
+			}
+}	
 
 // FRUIT PART ENDED
 
@@ -775,7 +809,7 @@ int main(void) {
                 clear_text_area(CHAR_X_2, CHAR_Y_2, 80);
                 if (last_left_click) {
                     current_state = STATE_PLAY;
-                    
+                    audio_playback_mono(Game_start_packed, Game_start_packed_len, 1, 1);
                 }
                 break;
             case STATE_PLAY:
