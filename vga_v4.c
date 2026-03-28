@@ -49,19 +49,6 @@ typedef struct {
 
 } Object;
 
-const unsigned short* numbers[10] = {
-  _0, 
-  _1, 
-  _2, 
-  _3, 
-  _4, 
-  _5, 
-  _6, 
-  _7, 
-  _8, 
-  _9
-};
-
 #define MAX_OBJECTS 7
 Object objects[MAX_OBJECTS];
 #define obj_h 48
