@@ -627,25 +627,37 @@ void collisions() {
     }
 
 
-//scoring use vga character buffer
-#define VGA_CHAR_BUFFER 0x09000000
+// new scoring logic using vga buffer
+// base address of character buffer
+#define CHAR_BUFFER_BASE 0x09000000
 
-
+// funcction writes single character
+// take in x and y start position
+// 80 x 60 buffer size so addr = x + y* 128 for byte
 void write_char(int x, int y, char c) {
     volatile char *char_buffer = (char *)CHAR_BUFFER_BASE;
     char_buffer[y * 128 + x] = c;
 }
 
+// used to write a full string
 void write_string(int x, int y, const char* str) {
     while (*str) {
+        // incr x and y to move across string
         write_char(x++, y, *str++);
     }
 }
 
+// eras prev score before drawing new score with spaces
 void clear_text_area(int x, int y, int len) {
     for (int i = 0; i < len; i++)
         write_char(x + i, y, ' ');
 }
+
+// SINCE char is 8x16 charx = pixelx/8 and chary = pixely/16
+#define CHAR_X_1 (134/8)
+#define CHAR_Y_1 (140/16)
+#define CHAR_X_2 (134/8)
+#define CHAR_Y_2 (160/16)
 
 
 void draw_score_top(int score) {
@@ -666,14 +678,16 @@ void draw_gameover_scores(int score, int high_score) {
     char line2[20];
 
     sprintf(line1, "SCORE: %03d", score);
-    sprintf(line2, "HIGH:  %03d", high_score);
+    sprintf(line2, "HIGH SCORE:  %03d", high_score);
 
     // Clear a region in the middle of the screen
-    for (int i = 20; i < 30; i++)
-        clear_text_area(20, i, 40);
+    
+    clear_text_area(10, 8, 40);
+    clear_text_area(10, 10, 40);
 
-    write_string(30, 24, line1);
-    write_string(30, 26, line2);
+
+    write_string(CHAR_X_1, CHAR_Y_1, line1);
+    write_string(CHAR_X_2, CHAR_Y_2, line2);
 }
 
 

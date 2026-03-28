@@ -11,24 +11,36 @@
 // return global boolean
 
 // new scoring logic using vga buffer
-#define VGA_CHAR_BUFFER 0x09000000
+// base address of character buffer
+#define CHAR_BUFFER_BASE 0x09000000
 
-
+// funcction writes single character
+// take in x and y start position
+// 80 x 60 buffer size so addr = x + y* 128 for byte
 void write_char(int x, int y, char c) {
     volatile char *char_buffer = (char *)CHAR_BUFFER_BASE;
     char_buffer[y * 128 + x] = c;
 }
 
+// used to write a full string
 void write_string(int x, int y, const char* str) {
     while (*str) {
+        // incr x and y to move across string
         write_char(x++, y, *str++);
     }
 }
 
+// eras prev score before drawing new score with spaces
 void clear_text_area(int x, int y, int len) {
     for (int i = 0; i < len; i++)
         write_char(x + i, y, ' ');
 }
+
+// SINCE char is 8x16 charx = pixelx/8 and chary = pixely/16
+#define CHAR_X_1 (134/8)
+#define CHAR_Y_1 (140/16)
+#define CHAR_X_2 (134/8)
+#define CHAR_Y_2 (160/16)
 
 
 void draw_score_top(int score) {
@@ -49,14 +61,16 @@ void draw_gameover_scores(int score, int high_score) {
     char line2[20];
 
     sprintf(line1, "SCORE: %03d", score);
-    sprintf(line2, "HIGH:  %03d", high_score);
+    sprintf(line2, "HIGH SCORE:  %03d", high_score);
 
     // Clear a region in the middle of the screen
-    for (int i = 20; i < 30; i++)
-        clear_text_area(20, i, 40);
+    
+    clear_text_area(10, 8, 40);
+    clear_text_area(10, 10, 40);
 
-    write_string(30, 24, line1);
-    write_string(30, 26, line2);
+
+    write_string(CHAR_X_1, CHAR_Y_1, line1);
+    write_string(CHAR_X_2, CHAR_Y_2, line2);
 }
 
 
@@ -81,7 +95,7 @@ void collisions() {
     // actually continuously call functin in play and with each call, check all opbject s and positions
         for (int i = 0; i < MAX_OBJECTS; i++) {
             // increment through the entire object (48x48 square)
-            if (object[i].onScreen) {
+            if (objects[i].onScreen) {
             
                 for (int y = 0; y < obj_h; y++) {
                     int y1 = objects[i].y + y;
@@ -89,7 +103,7 @@ void collisions() {
                     for (int x = 0; x < obj_w; x++) {
                         int x1 = objects[i].x + x;
                     
-                        unsigned short colour = obj[y * w + x];
+                        unsigned short colour = objects[i].image[y * (objects[i].w) + x];
                         if (colour != TRANSPARENT) {
                             if ((x1 == x_pos) && (y1 == y_pos)) {
                             
@@ -100,11 +114,11 @@ void collisions() {
                                     // also play sound
                                 } else if (objects[i].type == BOMB) {
                                     // if a bomb is hit, stop checking and return so that we can go to collisions
-                                    bomb_hit == 1;
+                                    bomb_hit = 1;
                                     return;
                                 } else {
                                 // if any other furit increment by 1
-                                    score += 1
+                                    score += 1;
                                     
                                 }
                             }
