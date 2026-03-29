@@ -18,6 +18,8 @@
 // #include "slice.h"
 #include "pomegranates.h"  
 #include "bombs.h"
+#include "gameovers.h"
+#include "watermelons.h"
 
 // screens
 #include "play.h"
