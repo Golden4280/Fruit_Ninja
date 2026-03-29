@@ -15,6 +15,7 @@
 
 //sounds
 #include "start_sound.h"
+#include "slice_h"
 
 // screens
 #include "play.h"
