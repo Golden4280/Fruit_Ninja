@@ -71,6 +71,7 @@ volatile struct audio_t * audiop = ((struct audio_t *)0xff203040);
 
 //AUDIO INITIALIZE
 static int Game_start_packed_len = sizeof(Game_start_packed) / sizeof(Game_start_packed[0]);
+static int Butterfly_Knife03_packed_len = sizeof(Butterfly_Knife03_packed) / sizeof(Butterfly_Knife03_packed[0]);
 
 // FUNCTIONS
 
@@ -695,6 +696,10 @@ void draw_gameover_scores(int score, int high_score) {
 int last_left_click = 0;
 int last_right_click = 0;
 int start_sound_played = 0;
+int knife_sound_ready = 1;
+
+int knife_index = 0;
+int knife_playing = 0;
 
 // PS2 processing function 
 void process_mouse_input(volatile int *ps2_ptr) {
@@ -766,6 +771,40 @@ void audio_playback_mono(int *Game_start_packed, int n, int step, int replicate)
 			}
 }	
 
+void check_tail_distance_sound() {
+    if (tail_count < 2) return;
+
+    int oldest_idx = (tail_head - tail_count + TAIL_LEN) % TAIL_LEN;
+
+    int dx = abs_val(x_pos - tail_x[oldest_idx]);
+    int dy = abs_val(y_pos - tail_y[oldest_idx]);
+    int dist = dx + dy;
+
+    if (dist > 150 && knife_sound_ready) {
+        knife_playing = 1;
+        knife_index = 0;
+        knife_sound_ready = 0;
+    }
+
+    if (dist < 80) {
+        knife_sound_ready = 1;
+    }
+}
+
+void update_audio() {
+    if (!knife_playing) return;
+
+    if (knife_index < Butterfly_Knife03_packed_len) {
+        if (audiop->warc > 0) {
+            audiop->ldata = Butterfly_Knife03_packed[knife_index];
+            audiop->rdata = Butterfly_Knife03_packed[knife_index];
+            knife_index++;
+        }
+    } else {
+        knife_playing = 0;
+    }
+}
+
 // FRUIT PART ENDED
 
 int main(void) {
@@ -820,7 +859,8 @@ int main(void) {
                 // *LEDR_ptr = 0x02;
                 collisions();
                 *LEDR_ptr = score;
-                if (bomb_hit || miss_count < 3) {
+                update_audio();
+                if (bomb_hit || miss_count >= 3) {
                     if (score > high_score) {
                     high_score = score;
                     }
@@ -877,6 +917,8 @@ int main(void) {
             push_tail(x_pos, y_pos);
             draw_tail();
             draw_cursor(x_pos, y_pos);
+            //FOR SLICING
+            check_tail_distance_sound();
 
 
         } else if (current_state == STATE_GAMEOVER) {
@@ -896,3 +938,7 @@ int main(void) {
 
     return 0;
 }
+
+
+//I HAVE THIS audio_playback_mono(Butterfly_Knife03_packed, Butterfly_Knife03_packed_len, 1, 1); to be placed
+//i want this sound to play every time the number of pixels between the cursor and the first tail square reaches like 300 pixels or something realistic maybe 150 pixels....
