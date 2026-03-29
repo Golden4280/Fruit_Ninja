@@ -77,6 +77,8 @@ static int Game_start_packed_len = sizeof(Game_start_packed) / sizeof(Game_start
 // static int Butterfly_Knife03_packed_len = sizeof(Butterfly_Knife03_packed) / sizeof(Butterfly_Knife03_packed[0]);
 static int angel_combo_5_packed_len = sizeof(angel_combo_5_packed) / sizeof(angel_combo_5_packed[0]);
 static int Bomb_explode_len = sizeof(Bomb_explode) / sizeof(Bomb_explode[0]);
+//static int Impact_Coconut_len = sizeof(Impact_Coconut) / sizeof(Impact_Coconut[0]);
+static int Game_over_len = sizeof(Game_over) / sizeof(Game_over[0]);
 
 // FUNCTIONS
 
@@ -987,7 +989,7 @@ int main(void) {
                 clear_text_area(CHAR_X_1, CHAR_Y_1, 80);
                 clear_text_area(CHAR_X_2, CHAR_Y_2, 80);
                 for (int i = 0; i < MAX_OBJECTS; i++) {
-                    objects[i].onScreen = 0
+                    objects[i].onScreen = 0;
                 }
                 if (last_left_click) {
                     current_state = STATE_PLAY;
@@ -1075,6 +1077,7 @@ int main(void) {
                 // freeze gameplay & run explosion animation
                 bomb_explosion(bomb_cx, bomb_cy, pixel_ctrl_ptr, 0xFFFF);
                 audio_playback_mono(Bomb_explode, Bomb_explode_len, 1, 1);
+                
 
                 current_state = STATE_GAMEOVER;
                 wait_for_vsync();
@@ -1098,7 +1101,7 @@ int main(void) {
 
         } else if (current_state == STATE_GAMEOVER) {
             draw_background(gameover);
-
+            audio_playback_mono(Game_over, Game_over_len, 1, 1);
             draw_gameover_scores(score, high_score);
             
 
