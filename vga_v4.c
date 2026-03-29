@@ -79,7 +79,7 @@ static int Game_start_packed_len = sizeof(Game_start_packed) / sizeof(Game_start
 // static int Butterfly_Knife03_packed_len = sizeof(Butterfly_Knife03_packed) / sizeof(Butterfly_Knife03_packed[0]);
 static int angel_combo_5_packed_len = sizeof(angel_combo_5_packed) / sizeof(angel_combo_5_packed[0]);
 static int Bomb_explode_len = sizeof(Bomb_explode) / sizeof(Bomb_explode[0]);
-//static int Impact_Coconut_len = sizeof(Impact_Coconut) / sizeof(Impact_Coconut[0]);
+static int Impact_Coconut_len = sizeof(Impact_Coconut) / sizeof(Impact_Coconut[0]);
 static int Game_over_len = sizeof(Game_over) / sizeof(Game_over[0]);
 
 // FUNCTIONS
