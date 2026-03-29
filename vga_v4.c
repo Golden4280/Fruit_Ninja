@@ -590,6 +590,106 @@ void physics() {
 
 // return global boolean
 
+// bomb exploding function
+// start point takes in bomb start coord and adds offset to start from center
+// draws white lines from bomb
+// calls delay
+
+void bomb_explosion(int cx, int cy, volatile int *pixel_ctrl_ptr)
+{
+    // 6 directions (diagonal + straight)
+    int dir_x[6] = {  1,  1,  0, -1, -1,  0 };
+    int dir_y[6] = {  0,  1,  1,  0, -1, -1 };
+
+    short int colour = 0xF800;      // red
+    int length = 200;               // line length
+
+    for (int frame = 0; frame < 5; frame++) {
+
+        pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // draw to back buffer
+
+
+        // draw 6 explosion rays
+        for (int r = 0; r < 6; r++) {
+
+            int x1 = cx;
+            int y1 = cy;
+
+            int x2 = cx + dir_x[r] * length;
+            int y2 = cy + dir_y[r] * length;
+
+            draw_line(x1, y1, x2, y2, colour);
+        }
+
+        wait_for_vsync();
+        pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // next back buffer
+    }
+}
+
+
+// DRAW LINE FUNCTION
+void draw_line(int x0, int y0, int x1, int y1, short int line_color)
+{
+    // used to determine how to navigate line
+    bool is_steep = abs(y1 - y0) > abs(x1 - x0);
+
+    // if steep, swap x and y of both points
+    if (is_steep) {
+        swap(&x0, &y0);
+        swap(&x1, &y1);
+    }
+
+    // ensure left‑to‑right drawing
+    if (x0 > x1) {
+        swap(&x0, &x1);
+        swap(&y0, &y1);
+    }
+
+    int deltax = x1 - x0;
+    int deltay = abs(y1 - y0);
+    int error = -(deltax / 2);
+    int y = y0;
+
+    int y_step;
+    if (y0 > y1) {
+        y_step = -1;
+    } else {
+        y_step = 1;
+    }
+
+    for (int x = x0; x <= x1; x++) {
+
+        if (is_steep) {
+            // BOUNDARY CHECK ADDED HERE
+            if (y >= 0 && y < 320 && x >= 0 && x < 240) {
+                plot_pixel(y, x, line_color);
+            }
+        } else {
+            // BOUNDARY CHECK ADDED HERE
+            if (x >= 0 && x < 320 && y >= 0 && y < 240) {
+                plot_pixel(x, y, line_color);
+            }
+        }
+
+        error = error + deltay;
+
+        if (error > 0) {
+            y = y + y_step;
+            error = error - deltax;
+        }
+    }
+}
+
+
+// SWAP
+void swap(int* a, int* b) {
+	int temp = *a;
+	*a = *b;
+	*b = temp;
+
+}
+
+
 void collisions() {
 
     // // use x_pos and y_pos 
