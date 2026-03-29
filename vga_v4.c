@@ -1132,15 +1132,14 @@ int main(void) {
 
             
             if (bomb_hit) {
-                if (score > high_score)
-                    high_score = score;
+                
 
                 // freeze gameplay & run explosion animation
                 bomb_explosion(bomb_cx, bomb_cy, pixel_ctrl_ptr, 0xFFFF);
                 audio_playback_mono(Bomb_explode, Bomb_explode_len, 1, 1);
                 
 
-                current_state = STATE_GAMEOVER;
+                
                 wait_for_vsync();
                 pixel_buffer_start = *(pixel_ctrl_ptr + 1);
                 continue;      // skip normal PLAY draw
