@@ -134,6 +134,11 @@ enum States {
 // instead if bomg_hit == 1 then current_state = gameover else stays in play
 bool bomb_hit = 0;
 
+
+int bomb_cx = 0;
+int bomb_cy = 0;
+
+
 // global scoring variable
 // and high score variable for when in gaemover
 int score = 0;
@@ -611,7 +616,13 @@ void collisions() {
                                     // also play sound
                                 } else if (objects[i].type == BOMB) {
                                     // if a bomb is hit, stop checking and return so that we can go to collisions
+                                    bomb_cx = objects[i].x + objects[i].w/2;
+                                    bomb_cy = objects[i].y + objects[i].h/2;
                                     bomb_hit = 1;
+
+
+
+
                                     return;
                                 } else {
                                 // if any other furit increment by 1
@@ -865,7 +876,7 @@ int main(void) {
                 break;
             case STATE_PLAY:
                 // *LEDR_ptr = 0x02;
-                collisions();
+                // collisions();
                 *LEDR_ptr = score;
                // update_audio();
                 if (bomb_hit) {
@@ -916,8 +927,26 @@ int main(void) {
 
             add_object();
             physics();
-            drawAllObjects();
 
+            collisions();
+
+            
+            if (bomb_hit) {
+                if (score > high_score)
+                    high_score = score;
+
+                // freeze gameplay & run explosion animation
+                bomb_explosion(bomb_cx, bomb_cy, pixel_ctrl_ptr);
+
+                current_state = STATE_GAMEOVER;
+                wait_for_vsync();
+                pixel_buffer_start = *(pixel_ctrl_ptr + 1);
+                continue;      // skip normal PLAY draw
+            }
+
+
+
+            drawAllObjects();
             // update score display
             draw_score_top(score);
             
