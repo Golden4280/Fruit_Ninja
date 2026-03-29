@@ -91,6 +91,11 @@ void draw_gameover_scores(int score, int high_score) {
 // draws white lines from bomb
 // calls delay
 
+void explosion(Object *bo) {
+
+}
+
+
 // DRAW LINE FUNCTION
 void draw_line(int x0, int y0, int x1, int y1, short int line_color) 
 {
@@ -132,11 +137,16 @@ void draw_line(int x0, int y0, int x1, int y1, short int line_color)
 	}
 	
 	for (int x = x0; x <= x1; x++) {
-		if (is_steep) {
-		plot_pixel(y, x, line_color);
-		} else {
-		plot_pixel(x, y, line_color);
-		}
+        if (x0 >= 0 && x0 < 320 && y0 >= 0 && y0 < 240) {
+
+            if (is_steep) {
+		        plot_pixel(y, x, line_color);
+		    } else {
+		        plot_pixel(x, y, line_color);
+		    }
+
+        }
+		
 		// increment error for pixel calculation
 		error = error + deltay;
 	
