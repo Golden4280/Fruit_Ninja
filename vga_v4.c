@@ -16,7 +16,8 @@
 //sounds
 #include "start_sound.h"
 // #include "slice.h"
-#include "pomegranate.h"  
+#include "pomegranates.h"  
+#include "bombs.h"
 
 // screens
 #include "play.h"
@@ -75,6 +76,7 @@ volatile struct audio_t * audiop = ((struct audio_t *)0xff203040);
 static int Game_start_packed_len = sizeof(Game_start_packed) / sizeof(Game_start_packed[0]);
 // static int Butterfly_Knife03_packed_len = sizeof(Butterfly_Knife03_packed) / sizeof(Butterfly_Knife03_packed[0]);
 static int angel_combo_5_packed_len = sizeof(angel_combo_5_packed) / sizeof(angel_combo_5_packed[0]);
+static int Bomb_explode_len = sizeof(Bomb_explode) / sizeof(Bomb_explode[0]);
 
 // FUNCTIONS
 
@@ -725,6 +727,7 @@ void collisions() {
                                     bomb_cx = objects[i].x + objects[i].w/2;
                                     bomb_cy = objects[i].y + objects[i].h/2;
                                     bomb_hit = 1;
+                                    audio_playback_mono(Bomb_explode, Bomb_explode_len, 1, 1);
 
 
 

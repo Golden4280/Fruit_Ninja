@@ -1,7 +1,7 @@
 #ifndef BOMB_EXPLODE_H
 #define BOMB_EXPLODE_H
 
-int Bomb_explode[] = {
+static int Bomb_explode[] = {
     0xffe20002,
     0xf7f4ff89,
     0xd6bde0c4,

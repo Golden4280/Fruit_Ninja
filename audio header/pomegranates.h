@@ -3,7 +3,7 @@
 
 // packed 32-bit mono duplicated into both 16-bit halves
 // source: 16-bit PCM WAV byte dump, 22050 Hz, mono
-static const int angel_combo_5_packed[] = {
+static int angel_combo_5_packed[] = {
   0x00170017, 0xffe0ffe0, 0xfffbfffb, 0xffd7ffd7, 0xfff5fff5, 0x00100010, 0x00060006, 0x008c008c, 
   0x00650065, 0x00fd00fd, 0x00fb00fb, 0x01610161, 0x01c801c8, 0x01e801e8, 0x020d020d, 0x01b101b1, 
   0x021f021f, 0x01630163, 0x01ae01ae, 0x01710171, 0x00a300a3, 0x00d900d9, 0xff8bff8b, 0x00280028, 
