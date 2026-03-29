@@ -53,6 +53,8 @@ typedef struct {
 
   const unsigned short* image;
 
+  int *sound;
+
 } Object;
 
 #define MAX_OBJECTS 7
@@ -535,30 +537,39 @@ void randomGenerator(Object* obj) {
   switch (obj->type) {
     case APPLE:
       obj->image = Red_Apple;
+      obj->sound = // NICA
       break;
     case LEMON:
       obj->image = Lemon;
+      obj->sound = // NICA
       break;
     case BANANA:
       obj->image = Banana;
+      obj->sound = // NICA
       break;
     case PINEAPPLE:
       obj->image = Pineapple;
+      obj->sound = // NICA
       break;
     case WATERMELON:
       obj->image = Watermelon;
+      obj->sound = // NICA
       break;
     case STRAWBERRY:
       obj->image = Strawberry;
+      obj->sound = // NICA
       break;
     case POMEGRANATE:
       obj->image = Pomegranate;
+      obj->sound = angel_combo_5_packed;
       break;
     case BOMB:
       obj->image = Bomb;
+      obj->sound = Bomb_explode;
       break;
     default:
       obj->image = Bomb;
+      obj->sound = Bomb_explode;
 
       
   }
@@ -746,6 +757,7 @@ void collisions() {
                                 } else {
                                 // if any other furit increment by 1
                                     score += 1;
+                                    // NICA PLAY SOUND HERE
                                     
                                 }
                             
