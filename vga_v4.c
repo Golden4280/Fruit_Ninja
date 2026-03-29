@@ -73,6 +73,7 @@ volatile struct audio_t * audiop = ((struct audio_t *)0xff203040);
 //AUDIO INITIALIZE
 static int Game_start_packed_len = sizeof(Game_start_packed) / sizeof(Game_start_packed[0]);
 // static int Butterfly_Knife03_packed_len = sizeof(Butterfly_Knife03_packed) / sizeof(Butterfly_Knife03_packed[0]);
+static int angel_combo_5_packed_len = sizeof(angel_combo_5_packed) / sizeof(angel_combo_5_packed[0]);
 
 // FUNCTIONS
 
