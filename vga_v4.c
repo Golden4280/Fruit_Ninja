@@ -947,9 +947,6 @@ void start_fx(const int *data, int len) {
 }
 
 void update_fx(void) {
-    int packed;
-    short s0, s1;
-
     if (!fruit_fx.playing) return;
 
     while (audiop->warc > 0) {
@@ -959,22 +956,8 @@ void update_fx(void) {
             return;
         }
 
-        packed = fruit_fx.data[fruit_fx.index];
-
-        s0 = (short)(packed & 0xFFFF);
-        s1 = (short)((packed >> 16) & 0xFFFF);
-
-        audiop->ldata = s0;
-        audiop->rdata = s0;
-
-        if (audiop->warc == 0) {
-            fruit_fx.index++;
-            return;
-        }
-
-        audiop->ldata = s1;
-        audiop->rdata = s1;
-
+        audiop->ldata = fruit_fx.data[fruit_fx.index];
+        audiop->rdata = fruit_fx.data[fruit_fx.index];
         fruit_fx.index++;
     }
 }
@@ -1087,7 +1070,7 @@ int main(void) {
                     high_score = score;
                     }
                     current_state = STATE_GAMEOVER;
-
+                    audio_playback_mono(Game_over, Game_over_len, 1, 1);
                     
                 }
                 break;
@@ -1179,7 +1162,6 @@ int main(void) {
 
         } else if (current_state == STATE_GAMEOVER) {
             draw_background(gameover);
-            audio_playback_mono(Game_over, Game_over_len, 1, 1);
             draw_gameover_scores(score, high_score);
             
 
