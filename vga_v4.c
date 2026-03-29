@@ -87,6 +87,9 @@ void draw_background(const unsigned short* bg);
 void draw_object(int x0, int y0, int w, int h, const unsigned short* obj);
 void drawAllObjects();
 void audio_playback_mono(int *Game_start_packed, int n, int step, int replicate);
+void swap(int* a, int* b);
+void draw_line(int x0, int y0, int x1, int y1, short int line_color);
+void bomb_explosion(int cx, int cy, volatile int *pixel_ctrl_ptr);
 
 
 // DEFINED THINGS
@@ -602,10 +605,10 @@ void bomb_explosion(int cx, int cy, volatile int *pixel_ctrl_ptr)
     int dir_x[6] = {  1,  1,  0, -1, -1,  0 };
     int dir_y[6] = {  0,  1,  1,  0, -1, -1 };
 
-    short int colour = 0xF800;      // red
+    short int colour = 0xFFFF;      // red
     int length = 200;               // line length
 
-    for (int frame = 0; frame < 5; frame++) {
+    for (int frame = 0; frame < 30; frame++) {
 
         pixel_buffer_start = *(pixel_ctrl_ptr + 1);  // draw to back buffer
 
