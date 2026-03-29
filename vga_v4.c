@@ -91,7 +91,7 @@ void drawAllObjects();
 void audio_playback_mono(int *Game_start_packed, int n, int step, int replicate);
 void swap(int* a, int* b);
 void draw_line(int x0, int y0, int x1, int y1, short int line_color);
-void bomb_explosion(int cx, int cy, volatile int *pixel_ctrl_ptr);
+void bomb_explosion(int cx, int cy, volatile int *pixel_ctrl_ptr, short int colour);
 
 
 // DEFINED THINGS
@@ -141,9 +141,14 @@ enum States {
 // instead if bomg_hit == 1 then current_state = gameover else stays in play
 bool bomb_hit = 0;
 
+bool pom_hit = 0;
+
 
 int bomb_cx = 0;
 int bomb_cy = 0;
+
+int pom_cx = 0;
+int pom_cy = 0;
 
 
 // global scoring variable
@@ -601,13 +606,13 @@ void physics() {
 // draws white lines from bomb
 // calls delay
 
-void bomb_explosion(int cx, int cy, volatile int *pixel_ctrl_ptr)
+void bomb_explosion(int cx, int cy, volatile int *pixel_ctrl_ptr, short int colour)
 {
     // 6 directions (diagonal + straight)
     int dir_x[6] = {  1,  1,  0, -1, -1,  0 };
     int dir_y[6] = {  0,  1,  1,  0, -1, -1 };
 
-    short int colour = 0xFFFF;      // red
+    // short int colour = 0xFFFF;      // red
     int length = 200;               // line length
 
     for (int frame = 0; frame < 30; frame++) {
@@ -719,7 +724,10 @@ void collisions() {
                                 // check if pom
                                 if (objects[i].type == POMEGRANATE) {
                                     score += 2;
-                                    audio_playback_mono(angel_combo_5_packed, angel_combo_5_packed_len, 1, 1);
+                                    pom_cx = objects[i].x + objects[i].w/2;
+                                    pom_cy = objects[i].y + objects[i].h/2;
+                                    pom_hit = 1;
+                                    
                                     
                                     // also play sound
                                 } else if (objects[i].type == BOMB) {
@@ -727,7 +735,7 @@ void collisions() {
                                     bomb_cx = objects[i].x + objects[i].w/2;
                                     bomb_cy = objects[i].y + objects[i].h/2;
                                     bomb_hit = 1;
-                                    audio_playback_mono(Bomb_explode, Bomb_explode_len, 1, 1);
+                                    
 
 
 
@@ -978,6 +986,9 @@ int main(void) {
                 clear_text_area(2, 1, 10);
                 clear_text_area(CHAR_X_1, CHAR_Y_1, 80);
                 clear_text_area(CHAR_X_2, CHAR_Y_2, 80);
+                for (int i = 0; i < MAX_OBJECTS; i++) {
+                    objects[i].onScreen = 0
+                }
                 if (last_left_click) {
                     current_state = STATE_PLAY;
                     audio_playback_mono(Game_start_packed, Game_start_packed_len, 1, 1);
@@ -988,6 +999,9 @@ int main(void) {
                 // collisions();
                 *LEDR_ptr = score;
                // update_audio();
+
+              
+
                 if (bomb_hit) {
                     if (score > high_score) {
                     high_score = score;
@@ -1038,6 +1052,20 @@ int main(void) {
             physics();
 
             collisions();
+            
+
+            if (pom_hit) {
+                if (score > high_score)
+                    high_score = score;
+
+                // freeze gameplay & run explosion animation
+                bomb_explosion(pom_cx, pom_cy, pixel_ctrl_ptr, 0xf515);
+                audio_playback_mono(angel_combo_5_packed, angel_combo_5_packed_len, 1, 1);
+
+                wait_for_vsync();
+                pixel_buffer_start = *(pixel_ctrl_ptr + 1);
+                pom_hit = 0;
+            }
 
             
             if (bomb_hit) {
@@ -1045,7 +1073,8 @@ int main(void) {
                     high_score = score;
 
                 // freeze gameplay & run explosion animation
-                bomb_explosion(bomb_cx, bomb_cy, pixel_ctrl_ptr);
+                bomb_explosion(bomb_cx, bomb_cy, pixel_ctrl_ptr, 0xFFFF);
+                audio_playback_mono(Bomb_explode, Bomb_explode_len, 1, 1);
 
                 current_state = STATE_GAMEOVER;
                 wait_for_vsync();
