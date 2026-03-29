@@ -54,6 +54,7 @@ typedef struct {
   const unsigned short* image;
 
   int *sound;
+  int sound_len;
 
 } Object;
 
@@ -73,6 +74,15 @@ struct audio_t {
 	volatile unsigned int rdata;
 };
 volatile struct audio_t * audiop = ((struct audio_t *)0xff203040);
+
+typedef struct {
+    const int *data;
+    int len;
+    int index;
+    int playing;
+} FxPlayer;
+
+FxPlayer fruit_fx = {0, 0, 0, 0};
 
 //AUDIO INITIALIZE
 static int Game_start_packed_len = sizeof(Game_start_packed) / sizeof(Game_start_packed[0]);
@@ -96,6 +106,9 @@ void audio_playback_mono(int *Game_start_packed, int n, int step, int replicate)
 void swap(int* a, int* b);
 void draw_line(int x0, int y0, int x1, int y1, short int line_color);
 void bomb_explosion(int cx, int cy, volatile int *pixel_ctrl_ptr, short int colour);
+
+void start_fx(const int *data, int len);
+void update_fx(void);
 
 
 // DEFINED THINGS
@@ -537,40 +550,48 @@ void randomGenerator(Object* obj) {
   switch (obj->type) {
     case APPLE:
       obj->image = Red_Apple;
-      obj->sound = // NICA
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case LEMON:
       obj->image = Lemon;
-      obj->sound = // NICA
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case BANANA:
       obj->image = Banana;
-      obj->sound = // NICA
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case PINEAPPLE:
       obj->image = Pineapple;
-      obj->sound = // NICA
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case WATERMELON:
       obj->image = Watermelon;
-      obj->sound = // NICA
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case STRAWBERRY:
       obj->image = Strawberry;
-      obj->sound = // NICA
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case POMEGRANATE:
       obj->image = Pomegranate;
-      obj->sound = angel_combo_5_packed;
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case BOMB:
       obj->image = Bomb;
-      obj->sound = Bomb_explode;
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     default:
       obj->image = Bomb;
-      obj->sound = Bomb_explode;
-
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       
   }
 }
@@ -757,7 +778,7 @@ void collisions() {
                                 } else {
                                 // if any other furit increment by 1
                                     score += 1;
-                                    // NICA PLAY SOUND HERE
+                                    start_fx(objects[i].sound, objects[i].sound_len);
                                     
                                 }
                             
@@ -914,6 +935,48 @@ void audio_playback_mono(int *Game_start_packed, int n, int step, int replicate)
 			}
 }	
 
+void start_fx(const int *data, int len) {
+    if (data == NULL || len <= 0) return;
+
+    fruit_fx.data = data;
+    fruit_fx.len = len;
+    fruit_fx.index = 0;
+    fruit_fx.playing = 1;
+}
+
+void update_fx(void) {
+    int packed;
+    short s0, s1;
+
+    if (!fruit_fx.playing) return;
+
+    while (audiop->warc > 0) {
+        if (fruit_fx.index >= fruit_fx.len) {
+            fruit_fx.playing = 0;
+            fruit_fx.index = 0;
+            return;
+        }
+
+        packed = fruit_fx.data[fruit_fx.index];
+
+        s0 = (short)(packed & 0xFFFF);
+        s1 = (short)((packed >> 16) & 0xFFFF);
+
+        audiop->ldata = s0;
+        audiop->rdata = s0;
+
+        if (audiop->warc == 0) {
+            fruit_fx.index++;
+            return;
+        }
+
+        audiop->ldata = s1;
+        audiop->rdata = s1;
+
+        fruit_fx.index++;
+    }
+}
+
 // void check_tail_distance_sound() {
 //     if (tail_count < 2) return;
 
@@ -991,6 +1054,7 @@ int main(void) {
 
         // process mouse input FIRST
         process_mouse_input(ps2_ptr);
+        update_fx();
 
         // update fsm from clicks
         switch (current_state) {
