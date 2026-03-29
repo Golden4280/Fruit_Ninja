@@ -15,7 +15,7 @@
 
 //sounds
 #include "start_sound.h"
-#include "slice_h"
+// #include "slice.h"
 
 // screens
 #include "play.h"
@@ -72,7 +72,7 @@ volatile struct audio_t * audiop = ((struct audio_t *)0xff203040);
 
 //AUDIO INITIALIZE
 static int Game_start_packed_len = sizeof(Game_start_packed) / sizeof(Game_start_packed[0]);
-static int Butterfly_Knife03_packed_len = sizeof(Butterfly_Knife03_packed) / sizeof(Butterfly_Knife03_packed[0]);
+// static int Butterfly_Knife03_packed_len = sizeof(Butterfly_Knife03_packed) / sizeof(Butterfly_Knife03_packed[0]);
 
 // FUNCTIONS
 
@@ -139,7 +139,7 @@ bool bomb_hit = 0;
 int score = 0;
 int high_score = 0;
 int old_score = -1; // for updating
-int miss_count = 0;
+
 
 volatile enum States current_state = STATE_START;
 volatile int fruit_count = 0;
@@ -564,7 +564,7 @@ void physics() {
   if (objects[i].y > 240 + objects[i].h) {
     objects[i].onScreen = 0;
     // inside physics
-    miss_count++;
+   
     
   }
 
@@ -772,46 +772,46 @@ void audio_playback_mono(int *Game_start_packed, int n, int step, int replicate)
 			}
 }	
 
-void check_tail_distance_sound() {
-    if (tail_count < 2) return;
+// void check_tail_distance_sound() {
+//     if (tail_count < 2) return;
 
-    int oldest_idx = (tail_head - tail_count + TAIL_LEN) % TAIL_LEN;
+//     int oldest_idx = (tail_head - tail_count + TAIL_LEN) % TAIL_LEN;
 
-    int dx = abs_val(x_pos - tail_x[oldest_idx]);
-    int dy = abs_val(y_pos - tail_y[oldest_idx]);
-    int dist = dx + dy;
+//     int dx = abs_val(x_pos - tail_x[oldest_idx]);
+//     int dy = abs_val(y_pos - tail_y[oldest_idx]);
+//     int dist = dx + dy;
 
-    if (dist > 20 && knife_sound_ready) {
-        knife_playing = 1;
-        knife_index = 0;
-        knife_sound_ready = 0;
-    }
+//     if (dist > 20 && knife_sound_ready) {
+//         knife_playing = 1;
+//         knife_index = 0;
+//         knife_sound_ready = 0;
+//     }
 
-    if (dist < 8) {
-        knife_sound_ready = 1;
-    }
-}
+//     if (dist < 8) {
+//         knife_sound_ready = 1;
+//     }
+// }
 
-void update_audio() {
-    int s;
+// void update_audio() {
+//     int s;
 
-    if (!knife_playing) return;
+//     if (!knife_playing) return;
 
-    for (s = 0; s < 1; s++) {
-        if (knife_index >= Butterfly_Knife03_packed_len) {
-            knife_playing = 0;
-            break;
-        }
+//     for (s = 0; s < 1; s++) {
+//         if (knife_index >= Butterfly_Knife03_packed_len) {
+//             knife_playing = 0;
+//             break;
+//         }
 
-        if (audiop->warc == 0) {
-            break;
-        }
+//         if (audiop->warc == 0) {
+//             break;
+//         }
 
-        audiop->ldata = Butterfly_Knife03_packed[knife_index];
-        audiop->rdata = Butterfly_Knife03_packed[knife_index];
-        knife_index++;
-    }
-}
+//         audiop->ldata = Butterfly_Knife03_packed[knife_index];
+//         audiop->rdata = Butterfly_Knife03_packed[knife_index];
+//         knife_index++;
+//     }
+// }
 
 // FRUIT PART ENDED
 
@@ -867,8 +867,8 @@ int main(void) {
                 // *LEDR_ptr = 0x02;
                 collisions();
                 *LEDR_ptr = score;
-                update_audio();
-                if (bomb_hit || miss_count >= 3) {
+               // update_audio();
+                if (bomb_hit) {
                     if (score > high_score) {
                     high_score = score;
                     }
@@ -926,7 +926,7 @@ int main(void) {
             draw_tail();
             draw_cursor(x_pos, y_pos);
             //FOR SLICING
-            check_tail_distance_sound();
+            //check_tail_distance_sound();
 
 
         } else if (current_state == STATE_GAMEOVER) {
