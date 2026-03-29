@@ -781,13 +781,13 @@ void check_tail_distance_sound() {
     int dy = abs_val(y_pos - tail_y[oldest_idx]);
     int dist = dx + dy;
 
-    if (dist > 30 && knife_sound_ready) {
+    if (dist > 20 && knife_sound_ready) {
         knife_playing = 1;
         knife_index = 0;
         knife_sound_ready = 0;
     }
 
-    if (dist < 10) {
+    if (dist < 8) {
         knife_sound_ready = 1;
     }
 }
@@ -947,6 +947,3 @@ int main(void) {
     return 0;
 }
 
-
-//I HAVE THIS audio_playback_mono(Butterfly_Knife03_packed, Butterfly_Knife03_packed_len, 1, 1); to be placed
-//i want this sound to play every time the number of pixels between the cursor and the first tail square reaches like 300 pixels or something realistic maybe 150 pixels....
