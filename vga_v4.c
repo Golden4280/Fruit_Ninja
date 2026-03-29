@@ -16,6 +16,7 @@
 //sounds
 #include "start_sound.h"
 // #include "slice.h"
+#include "pomegranate.h"  
 
 // screens
 #include "play.h"
@@ -713,6 +714,7 @@ void collisions() {
                                 // check if pom
                                 if (objects[i].type == POMEGRANATE) {
                                     score += 2;
+                                    audio_playback_mono(angel_combo_5_packed, angel_combo_5_packed_len, 1, 1);
                                     
                                     // also play sound
                                 } else if (objects[i].type == BOMB) {
