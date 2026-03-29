@@ -781,28 +781,35 @@ void check_tail_distance_sound() {
     int dy = abs_val(y_pos - tail_y[oldest_idx]);
     int dist = dx + dy;
 
-    if (dist > 150 && knife_sound_ready) {
+    if (dist > 30 && knife_sound_ready) {
         knife_playing = 1;
         knife_index = 0;
         knife_sound_ready = 0;
     }
 
-    if (dist < 80) {
+    if (dist < 10) {
         knife_sound_ready = 1;
     }
 }
 
 void update_audio() {
+    int s;
+
     if (!knife_playing) return;
 
-    if (knife_index < Butterfly_Knife03_packed_len) {
-        if (audiop->warc > 0) {
-            audiop->ldata = Butterfly_Knife03_packed[knife_index];
-            audiop->rdata = Butterfly_Knife03_packed[knife_index];
-            knife_index++;
+    for (s = 0; s < 1; s++) {
+        if (knife_index >= Butterfly_Knife03_packed_len) {
+            knife_playing = 0;
+            break;
         }
-    } else {
-        knife_playing = 0;
+
+        if (audiop->warc == 0) {
+            break;
+        }
+
+        audiop->ldata = Butterfly_Knife03_packed[knife_index];
+        audiop->rdata = Butterfly_Knife03_packed[knife_index];
+        knife_index++;
     }
 }
 
