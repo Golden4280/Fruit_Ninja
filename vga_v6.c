@@ -20,10 +20,6 @@
 #include "bombs.h"
 #include "gameovers.h"
 #include "watermelons.h"
-#include "bananas.h"
-#include "Red_Apples.h"
-#include "pineapples.h"
-#include "strawberrys.h"
 
 // screens
 #include "play.h"
@@ -97,11 +93,6 @@ static int angel_combo_5_packed_len = sizeof(angel_combo_5_packed) / sizeof(ange
 static int Bomb_explode_len = sizeof(Bomb_explode) / sizeof(Bomb_explode[0]);
 static int Impact_Coconut_len = sizeof(Impact_Coconut) / sizeof(Impact_Coconut[0]);
 static int Game_over_len = sizeof(Game_over) / sizeof(Game_over[0]);
-static int Impact_Apple_len = sizeof(Impact_Apple_packed) / sizeof(Impact_Apple_packed[0]);
-static int Impact_Pineapple_packed = sizeof(Impact_Pineapple_packed) / sizeof(Impact_Pineapple_packed[0]);
-static int Impact_Banana_len = sizeof(Impact_Banana_packed) / sizeof(Impact_Banana_packed[0]);
-static int Impact_Strawberry_len = sizeof(splatter_medium_1_packed) / sizeof(splatter_medium_1_packed[0]);
-static int Impact_Lemon_len = sizeof(ui_button_push_packed) / sizeof(ui_button_push_packed[0]);
 
 // FUNCTIONS
 
@@ -561,23 +552,23 @@ void randomGenerator(Object* obj) {
   switch (obj->type) {
     case APPLE:
       obj->image = Red_Apple;
-      obj->sound = Impact_Apple_packed;
-      obj->sound_len = Impact_Apple_len;
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case LEMON:
       obj->image = Lemon;
-      obj->sound = ui_button_push_packed;
-      obj->sound_len = Impact_Lemon_len;
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case BANANA:
       obj->image = Banana;
-      obj->sound = Impact_Banana_packed;
-      obj->sound_len = Impact_Banana_len;
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case PINEAPPLE:
       obj->image = Pineapple;
-      obj->sound = Impact_Pineapple_packed;
-      obj->sound_len = Impact_Pineapple_len;
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case WATERMELON:
       obj->image = Watermelon;
@@ -586,23 +577,23 @@ void randomGenerator(Object* obj) {
       break;
     case STRAWBERRY:
       obj->image = Strawberry;
-      obj->sound = splatter_medium_1_packed;
-      obj->sound_len = Impact_Strawberry_len;
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case POMEGRANATE:
       obj->image = Pomegranate;
-      obj->sound = angel_combo_5_packed;
-      obj->sound_len = angel_combo_5_packed_len;
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     case BOMB:
       obj->image = Bomb;
-      obj->sound = Bomb_explode;
-      obj->sound_len = Bomb_explode_len;
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       break;
     default:
       obj->image = Bomb;
-      obj->sound = Bomb_explode;
-      obj->sound_len = Bomb_explode_len;
+      obj->sound = Impact_Coconut;
+      obj->sound_len = Impact_Coconut_len;
       
   }
 }
