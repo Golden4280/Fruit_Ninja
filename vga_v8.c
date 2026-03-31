@@ -65,7 +65,7 @@ typedef struct {
 
 } Object;
 
-#define MAX_OBJECTS 7
+#define MAX_OBJECTS 5
 Object objects[MAX_OBJECTS];
 #define obj_h 48
 #define obj_w 48
@@ -152,7 +152,7 @@ short int Buffer2[240][512];
 
 #define BLACK  0x0000
 #define WHITE  0xFFFF
-#define TAIL_LEN    10 //number of ghost positions stored , tail length
+#define TAIL_LEN    6 //number of ghost positions stored , tail length
 #define TAIL_MIN_SZ  0 // smallest tail square size in pixels
 #define TAIL_STEP    1 //how many pixels of movement before a new box is added
 
@@ -363,7 +363,7 @@ void draw_tail(void) {
 
     // Loop through all stored tail points (oldest → newest)
     for (i = 0; i < tail_count; i++) {
-
+        service_fx();
         // Find the correct index in the circular buffer
         // (handles wrap-around properly)
         idx = (tail_head - tail_count + i + TAIL_LEN * 2) % TAIL_LEN;
@@ -532,14 +532,14 @@ void randomGenerator(Object* obj) {
   obj->y = 239;  // objects start at bottom
 
   // Randomize upward velocity
-  obj->vy = -(rand() % 5 +
-              5);  // gives velocity 5-9 (open to change upon testing)
+  obj->vy = -(rand() % 6 +
+              6);  // gives velocity 5-9 (open to change upon testing)
                    // negative since moving up screen (decreasing y direction)
 
   // Randomize horizontal velocity
   obj->vx =
-      rand() % 5 -
-      2;  // gives value -2, -1, 0, 1, 2 for left and right movement on screen
+      rand() % 7 -
+      3;  // gives value -2, -1, 0, 1, 2 for left and right movement on screen
 
   // Weighted random generator for fruit or bomb
   // start with 60/30/10 (fruit/pom/bomb) split and test
@@ -551,7 +551,7 @@ void randomGenerator(Object* obj) {
       obj->onScreen =
           1;  // tells us an object is onscreen for later detection and such
 
-  obj->g = 0.2f;
+  obj->g = 0.35f;//0.2-> 0.25
 
   // chance of fruit
   if (chance < 70) {
@@ -624,11 +624,11 @@ void physics() {
   }
 
   // update position
-  objects[i].x += objects[i].vx;
-  objects[i].y += objects[i].vy;
+  objects[i].x += objects[i].vx*1.5f;
+  objects[i].y += objects[i].vy*1.5f;
 
   // apply force of gravity Fg = mg to vertical velocity
-  objects[i].vy += objects[i].g;
+  objects[i].vy += objects[i].g*1.5f;
 
   // when object is off screen
   if (objects[i].y > 240 + objects[i].h) {
@@ -766,6 +766,9 @@ void collisions() {
             if (objects[i].onScreen) {
             
                 for (int y = 0; y < obj_h; y++) {
+                    if((y&7)==0){
+                        service_fx();
+                    }
                     int y1 = objects[i].y + y;
 
                     for (int x = 0; x < obj_w; x++) {
@@ -928,7 +931,7 @@ void process_mouse_input(volatile int *ps2_ptr) {
 
                     
 
-                    update_cursor_position(dx, dy);//move cursor
+                    update_cursor_position(dx*4, dy*4);//move cursor
 
                    
                     last_left_click = left;
@@ -962,6 +965,8 @@ void start_fx(const int *data, int len) {
     fruit_fx.len = len;
     fruit_fx.index = 0;
     fruit_fx.playing = 1;
+
+    service_fx();
 }
 
 void service_fx(void) {
@@ -974,15 +979,16 @@ void service_fx(void) {
             break;
         }
 
-        audiop->ldata = fruit_fx.data[fruit_fx.index];
-        audiop->rdata = fruit_fx.data[fruit_fx.index];
-        fruit_fx.index++; 
+        // audiop->ldata = fruit_fx.data[fruit_fx.index];
+        // audiop->rdata = fruit_fx.data[fruit_fx.index];
+        // fruit_fx.index++; 
         //LACIE change the above three lines to 
-        /*
+        
         audiop->ldata = fruit_fx.data[fruit_fx.index];
         audiop->rdata = fruit_fx.data[fruit_fx.index + 1];
-        fruit_fx.index += 2;
-        */
+        fruit_fx.index += 8
+        ;
+        
     }
 }
 
@@ -1129,11 +1135,14 @@ int main(void) {
 
         } else if (current_state == STATE_PLAY) {
             draw_background(play);
+            service_fx();
 
             add_object();
             physics();
+            service_fx();
 
             collisions();
+            service_fx();
             
 
             if (pom_hit) {
@@ -1174,11 +1183,14 @@ int main(void) {
             drawAllObjects();
             // update score display
             draw_score_top(score);
+            service_fx();
             
 
             push_tail(x_pos, y_pos);
             draw_tail();
+            service_fx();
             draw_cursor(x_pos, y_pos);
+            service_fx();
             //FOR SLICING
             //check_tail_distance_sound();
 
@@ -1200,4 +1212,3 @@ int main(void) {
 
     return 0;
 }
-
