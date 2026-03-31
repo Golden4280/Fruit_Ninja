@@ -965,9 +965,9 @@ void start_fx(const int *data, int len) {
 }
 
 void service_fx(void) {
-    int samples_to_write = 64;   // tune this: 32, 64, 128
+   // int samples_to_write = 64;   // tune this: 32, 64, 128
 
-    while (fruit_fx.playing && audiop->warc > 0 && samples_to_write > 0) {
+    while (fruit_fx.playing && audiop->warc > 0) {
         if (fruit_fx.index >= fruit_fx.len) {
             fruit_fx.playing = 0;
             fruit_fx.index = 0;
@@ -976,8 +976,13 @@ void service_fx(void) {
 
         audiop->ldata = fruit_fx.data[fruit_fx.index];
         audiop->rdata = fruit_fx.data[fruit_fx.index];
-        fruit_fx.index++;
-        samples_to_write--;
+        fruit_fx.index++; 
+        //LACIE change the above three lines to 
+        /*
+        audiop->ldata = fruit_fx.data[fruit_fx.index];
+        audiop->rdata = fruit_fx.data[fruit_fx.index + 1];
+        fruit_fx.index += 2;
+        */
     }
 }
 
