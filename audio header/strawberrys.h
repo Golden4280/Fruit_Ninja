@@ -1,5 +1,5 @@
 #ifndef STRAWBERRYS_H
-#define STRAWBERRYS_H
+#define STRAWBERRYS_Hc
 
 // packed 32-bit mono duplicated into both 16-bit halves
 static const int splatter_medium_1_packed[] = {
