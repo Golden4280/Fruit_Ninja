@@ -657,7 +657,7 @@ void physics() {
   // when object is off screen
   if (objects[i].y > 240 + objects[i].h) {
     objects[i].onScreen = 0;
-    if (objects[i].type != Bomb) {
+    if (objects[i].type != BOMB) {
         miss_count++;
     }
     
@@ -893,23 +893,23 @@ void draw_miss_count(int misses) {
     char miss_X[16];
     char *x;
 
-    case (misses) {
-        (1): x = "X    ";
-        (2): x = "XX   ";
-        (3): x = "XXX  ";
-        (4): x = "XXXX ";
-        (5): x = "XXXXX";
-        default: x = "     "
+    switch (misses) {
+        case (1): x = "X    ";
+        case (2): x = "XX   ";
+        case (3): x = "XXX  ";
+        case (4): x = "XXXX ";
+        case (5): x = "XXXXX";
+        default: x = "     ";
     }
 
     // format as 3 digits, padded with zeros
-    sprintf(miss_X, "%5c", x);
+    sprintf(miss_X, "%5s", x);
 
     // Clear old score area (3 digits)
     clear_text_area((60), 1, 10);
 
     // Draw new score at top-left
-    write_string(60, 1, buffer);
+    write_string(60, 1, x);
 
 
 }
