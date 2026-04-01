@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 
 // objects
@@ -656,7 +657,10 @@ void physics() {
   // when object is off screen
   if (objects[i].y > 240 + objects[i].h) {
     objects[i].onScreen = 0;
-    miss_count++;
+    if (object[i].type != Bomb) {
+        miss_count++;
+    }
+    
     // inside physics
    
     
@@ -885,6 +889,29 @@ void draw_score_top(int score) {
     write_string(2, 1, buffer);
 }
 
+void draw_miss_count(int misses) {
+    char miss_X[16]
+    char *x;
+
+    case (misses) {
+        (1): x = "X"
+        (2): x = "XX"
+        (3): x = "XXX"
+        (4): x = "XXXX"
+        (5): x = "XXXXX"
+    }
+
+    // format as 3 digits, padded with zeros
+    sprintf(miss_X, "%5c", x);
+
+    // Clear old score area (3 digits)
+    clear_text_area((2*CHAR_X_1), 1, 10);
+
+    // Draw new score at top-left
+    write_string((2*CHAR_X_1), 1, buffer);
+
+
+}
 
 void draw_gameover_scores(int score, int high_score) {
     char line1[32];
@@ -1105,6 +1132,7 @@ int main(void) {
                 clear_text_area(2, 1, 10);
                 clear_text_area(CHAR_X_1, CHAR_Y_1, 80);
                 clear_text_area(CHAR_X_2, CHAR_Y_2, 80);
+                clear_text_area((2*CHAR_X_2), 1, 80);
                 for (int i = 0; i < MAX_OBJECTS; i++) {
                     objects[i].onScreen = 0;
                 }
@@ -1126,6 +1154,7 @@ int main(void) {
             case STATE_GAMEOVER:
                 // *LEDR_ptr = 0x10;
                 clear_text_area(2, 1, 10);
+                clear_text_area((2*CHAR_X_2), 1, 80);
                 // clear_text_area(CHAR_X_1, CHAR_Y_1, 80);
                 // clear_text_area(CHAR_X_2, CHAR_Y_2, 80);
                 
@@ -1202,11 +1231,12 @@ int main(void) {
                 continue;
             }
 
-            if (miss_count >= 3) {
+            if (miss_count >= 5) {
                 miss_count = 0;
                 if (score > high_score) {
                     high_score = score;
                 }
+                audio_playback_mono(Game_over, Game_over_len, 1, 1);
                 current_state = STATE_GAMEOVER;
             }
 
