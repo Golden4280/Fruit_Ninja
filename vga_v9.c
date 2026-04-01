@@ -175,6 +175,8 @@ bool bomb_hit = 0;
 
 bool pom_hit = 0;
 
+int miss_count = 0;
+
 
 int bomb_cx = 0;
 int bomb_cy = 0;
@@ -655,6 +657,7 @@ void physics() {
   // when object is off screen
   if (objects[i].y > 240 + objects[i].h) {
     objects[i].onScreen = 0;
+    miss_count++;
     // inside physics
    
     
@@ -1206,6 +1209,14 @@ int main(void) {
 
                 pixel_buffer_start = *(pixel_ctrl_ptr + 1);
                 continue;
+            }
+
+            if (miss_count >= 3) {
+                miss_count = 0;
+                if (score > high_score) {
+                    high_score = score;
+                }
+                current_state = STATE_GAMEOVER;
             }
 
 
