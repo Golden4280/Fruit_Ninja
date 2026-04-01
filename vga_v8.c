@@ -69,6 +69,9 @@ typedef struct {
 Object objects[MAX_OBJECTS];
 #define obj_h 48
 #define obj_w 48
+int spawn_timer = 0;
+int burst_count = 0;
+int burst_active = 0;
 
 //AUDIO STRUCT
 struct audio_t {
@@ -509,17 +512,35 @@ void drawAllObjects() {
 }
 
 void add_object() {
-  
-  for (int i = 0; i < MAX_OBJECTS; i++) {
-    if (!objects[i].onScreen) {
-      if (rand() % 7 == 0) {
-        randomGenerator(&objects[i]); // 10% chance of spawning per frmae
-      }
-      break; // one per frame
+
+    // waiting between bursts
+    if (!burst_active) {
+        spawn_timer++;
+
+        if (spawn_timer > 80) {   // ~2 seconds (assuming ~60 FPS)
+            burst_active = 1;
+            burst_count = 0;
+            spawn_timer = 0;
+        }
+        return;
     }
-  }
 
+    // during burst: spawn fruits
+    if (burst_active) {
 
+        for (int i = 0; i < MAX_OBJECTS; i++) {
+            if (!objects[i].onScreen) {
+                randomGenerator(&objects[i]);
+                burst_count++;
+                break;
+            }
+        }
+
+        // stop burst after N fruits
+        if (burst_count >= 10) {
+            burst_active = 0;
+        }
+    }
 }
 
 // RANDOM GEN
@@ -554,7 +575,7 @@ void randomGenerator(Object* obj) {
   obj->g = 0.35f;//0.2-> 0.25
 
   // chance of fruit
-  if (chance < 70) {
+  if (chance < 80) {
     obj->type = rand() % 6;  // random index 0-5 for the first 6 fruit types
 
   } else if (chance < 85) {
