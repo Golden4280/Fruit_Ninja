@@ -69,9 +69,9 @@ typedef struct {
 Object objects[MAX_OBJECTS];
 #define obj_h 48
 #define obj_w 48
-int spawn_timer = 0;
-int burst_count = 0;
-int burst_active = 0;
+int spawn_timer = 0; //counts time between bursts
+int burst_count = 0; //are we currently spawning fruits? (0 = no, 1 = yes)
+int burst_active = 0; //how many fruits we’ve spawned in this burst
 
 //AUDIO STRUCT
 struct audio_t {
@@ -85,11 +85,11 @@ struct audio_t {
 };
 volatile struct audio_t * audiop = ((struct audio_t *)0xff203040);
 
-typedef struct {
-    const int *data;
-    int len;
-    int index;
-    int playing;
+typedef struct {//STORES CURRENT SOUND EFFECT STATE
+    const int *data; //which sound array is active
+    int len; //total samples
+    int index; //where we are in the sound right now
+    int playing; //whether a sound is currently active
 } FxPlayer;
 
 FxPlayer fruit_fx = {0, 0, 0, 0};
@@ -514,13 +514,14 @@ void drawAllObjects() {
 void add_object() {
 
     // waiting between bursts
+    //every frame increase spawn_timer and when it hits 80 start a cycle of fruits
     if (!burst_active) {
         spawn_timer++;
 
-        if (spawn_timer > 80) {   // ~2 seconds (assuming ~60 FPS)
-            burst_active = 1;
-            burst_count = 0;
-            spawn_timer = 0;
+        if (spawn_timer > 80) {   // ~1.5 seconds assuming ~60 FPS
+            burst_active = 1; //turn on burst
+            burst_count = 0; //reset count
+            spawn_timer = 0; //reset timer
         }
         return;
     }
@@ -531,7 +532,7 @@ void add_object() {
         for (int i = 0; i < MAX_OBJECTS; i++) {
             if (!objects[i].onScreen) {
                 randomGenerator(&objects[i]);
-                burst_count++;
+                burst_count++; //increase number every time a fruit is generated
                 break;
             }
         }
@@ -965,33 +966,41 @@ void process_mouse_input(volatile int *ps2_ptr) {
 }
 //AUDIO FUNCTION
 void audio_playback_mono(const int *data, int n, int step, int replicate) {
+    //take sound array and push it to the audio fifo until theres no more in the array
             int i;
 
             audiop->control = 0x8; // clear the output FIFOs
             audiop->control = 0x0; // resume input conversion
-            for (i = 0; i < n; i+=step) {
+            for (i = 0; i < n; i+=step) {//step is how much to jump each time (I TWEAKED THIS A PUNCH (THE GLOBAL THING))
               // output data if there is space in the output FIFOs
-              for (int r=0; r < replicate; r++) {
-				while(audiop->warc == 0);
+              for (int r=0; r < replicate; r++) { //replicate is always 1 cuz we dont want it to be long 
+				while(audiop->warc == 0); //THIS IS WHY TH ESTOPS THE SCREEN (dont return until sound finished)
                 audiop->ldata = data[i];
                 audiop->rdata = data[i];
 			  }
 			}
 }	
 
-void start_fx(const int *data, int len) {
-    if (data == NULL || len <= 0) return;
+void start_fx(const int *data, int len) {//Starts a fruit sound, DOES NOT PLAY THE WHOLE THING
+    if (data == NULL || len <= 0) return; //if theres nothing in the sound return 
 
     fruit_fx.data = data;
     fruit_fx.len = len;
-    fruit_fx.index = 0;
-    fruit_fx.playing = 1;
+    fruit_fx.index = 0; //start at inex 0
+    fruit_fx.playing = 1; //mark it as active
 
     service_fx();
 }
 
 void service_fx(void) {
-   // int samples_to_write = 64;   // tune this: 32, 64, 128
+    //Instead of stopping everything until the entire sound finishes, just give audio a little bit at a time 
+    //call during background drawing
+    // during object drawing
+    // in collision loops
+    // before/after vsync
+    // during tail drawing
+
+   // int samples_to_write = 64;   // 32, 64, 128
 
     while (fruit_fx.playing && audiop->warc > 0) {
         if (fruit_fx.index >= fruit_fx.len) {
@@ -1002,11 +1011,11 @@ void service_fx(void) {
 
         // audiop->ldata = fruit_fx.data[fruit_fx.index];
         // audiop->rdata = fruit_fx.data[fruit_fx.index];
-        // fruit_fx.index++; 
+        // fruit_fx.index++; //CHANGED THIS 
         //LACIE change the above three lines to 
         
         audiop->ldata = fruit_fx.data[fruit_fx.index];
-        audiop->rdata = fruit_fx.data[fruit_fx.index + 1];
+        audiop->rdata = fruit_fx.data[fruit_fx.index + 1]; ///CHANGE THE +1
         fruit_fx.index += 8
         ;
         
