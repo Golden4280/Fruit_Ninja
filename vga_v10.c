@@ -902,8 +902,8 @@ void draw_miss_count(int misses) {
         default: x_string = "     "; break;
     }
 
-    clear_text_area(60, 1, 5);
-    write_string(60, 1, x_string);
+    clear_text_area(72, 1, 5);
+    write_string(72, 1, x_string);
 }
 
 void draw_gameover_scores(int score, int high_score) {
@@ -975,7 +975,7 @@ void process_mouse_input(volatile int *ps2_ptr) {
 
                     
 
-                    update_cursor_position(dx, dy);//move cursor
+                    update_cursor_position(dx*0.85, dy*0.85);//move cursor
 
                    
                     last_left_click = left;
@@ -1147,7 +1147,7 @@ int main(void) {
             case STATE_GAMEOVER:
                 // *LEDR_ptr = 0x10;
                 clear_text_area(2, 1, 10);
-                clear_text_area(60, 1, 80);
+                clear_text_area(72, 1, 80);
                 // clear_text_area(CHAR_X_1, CHAR_Y_1, 80);
                 // clear_text_area(CHAR_X_2, CHAR_Y_2, 80);
                 
@@ -1253,6 +1253,7 @@ int main(void) {
         } else if (current_state == STATE_GAMEOVER) {
             draw_background(gameover);
             draw_gameover_scores(score, high_score);
+            miss_count = 0;
             
 
         }
