@@ -890,28 +890,20 @@ void draw_score_top(int score) {
 }
 
 void draw_miss_count(int misses) {
-    char miss_X[16];
-    char *x;
+
+    const char *x_string;
 
     switch (misses) {
-        case (1): x = "X    ";
-        case (2): x = "XX   ";
-        case (3): x = "XXX  ";
-        case (4): x = "XXXX ";
-        case (5): x = "XXXXX";
-        default: x = "     ";
+        case 1: x_string = "X    "; break;
+        case 2: x_string = "XX   "; break;
+        case 3: x_string = "XXX  "; break;
+        case 4: x_string = "XXXX "; break;
+        case 5: x_string = "XXXXX"; break;
+        default: x_string = "     "; break;
     }
 
-    // format as 3 digits, padded with zeros
-    sprintf(miss_X, "%5s", x);
-
-    // Clear old score area (3 digits)
-    clear_text_area((60), 1, 10);
-
-    // Draw new score at top-left
-    write_string(60, 1, x);
-
-
+    clear_text_area(60, 1, 5);
+    write_string(60, 1, x_string);
 }
 
 void draw_gameover_scores(int score, int high_score) {
@@ -1200,8 +1192,6 @@ int main(void) {
             
 
             if (pom_hit) {
-                if (score > high_score)
-                    high_score = score;
 
                 // freeze gameplay & run explosion animation
                 bomb_explosion(pom_cx, pom_cy, pixel_ctrl_ptr, 0xf515);
@@ -1212,6 +1202,7 @@ int main(void) {
                 service_fx();
                 pixel_buffer_start = *(pixel_ctrl_ptr + 1);
                 pom_hit = 0;
+                miss_count = 0;
             }
 
             
