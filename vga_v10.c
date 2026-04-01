@@ -561,7 +561,7 @@ void randomGenerator(Object* obj) {
 
   // Randomize horizontal velocity
   obj->vx =
-      rand() % 7 -
+      rand() % 5 -
       3;  // gives value -2, -1, 0, 1, 2 for left and right movement on screen
 
   // Weighted random generator for fruit or bomb
