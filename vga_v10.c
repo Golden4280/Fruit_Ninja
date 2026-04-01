@@ -156,7 +156,7 @@ short int Buffer2[240][512];
 
 #define BLACK  0x0000
 #define WHITE  0xFFFF
-#define TAIL_LEN    6 //number of ghost positions stored , tail length
+#define TAIL_LEN    10 //number of ghost positions stored , tail length
 #define TAIL_MIN_SZ  0 // smallest tail square size in pixels
 #define TAIL_STEP    1 //how many pixels of movement before a new box is added
 
@@ -657,7 +657,7 @@ void physics() {
   // when object is off screen
   if (objects[i].y > 240 + objects[i].h) {
     objects[i].onScreen = 0;
-    if (object[i].type != Bomb) {
+    if (objects[i].type != Bomb) {
         miss_count++;
     }
     
@@ -890,25 +890,26 @@ void draw_score_top(int score) {
 }
 
 void draw_miss_count(int misses) {
-    char miss_X[16]
+    char miss_X[16];
     char *x;
 
     case (misses) {
-        (1): x = "X"
-        (2): x = "XX"
-        (3): x = "XXX"
-        (4): x = "XXXX"
-        (5): x = "XXXXX"
+        (1): x = "X    ";
+        (2): x = "XX   ";
+        (3): x = "XXX  ";
+        (4): x = "XXXX ";
+        (5): x = "XXXXX";
+        default: x = "     "
     }
 
     // format as 3 digits, padded with zeros
     sprintf(miss_X, "%5c", x);
 
     // Clear old score area (3 digits)
-    clear_text_area((2*CHAR_X_1), 1, 10);
+    clear_text_area((60), 1, 10);
 
     // Draw new score at top-left
-    write_string((2*CHAR_X_1), 1, buffer);
+    write_string(60, 1, buffer);
 
 
 }
@@ -1132,7 +1133,7 @@ int main(void) {
                 clear_text_area(2, 1, 10);
                 clear_text_area(CHAR_X_1, CHAR_Y_1, 80);
                 clear_text_area(CHAR_X_2, CHAR_Y_2, 80);
-                clear_text_area((2*CHAR_X_2), 1, 80);
+                clear_text_area(60, 1, 80);
                 for (int i = 0; i < MAX_OBJECTS; i++) {
                     objects[i].onScreen = 0;
                 }
@@ -1154,7 +1155,7 @@ int main(void) {
             case STATE_GAMEOVER:
                 // *LEDR_ptr = 0x10;
                 clear_text_area(2, 1, 10);
-                clear_text_area((2*CHAR_X_2), 1, 80);
+                clear_text_area(60, 1, 80);
                 // clear_text_area(CHAR_X_1, CHAR_Y_1, 80);
                 // clear_text_area(CHAR_X_2, CHAR_Y_2, 80);
                 
@@ -1245,6 +1246,7 @@ int main(void) {
             drawAllObjects();
             // update score display
             draw_score_top(score);
+            draw_miss_count(miss_count);
             service_fx();
             
 
